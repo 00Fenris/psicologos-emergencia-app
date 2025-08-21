@@ -25,8 +25,8 @@ function mostrarVista(vista) {
 
 // --- Login y registro ---
 document.getElementById('btnLogin').onclick = async () => {
-  const email = document.getElementById('email').value;
-  const pass = document.getElementById('password').value;
+  const email = document.getElementById('emailLogin').value;
+  const pass = document.getElementById('passwordLogin').value;
   try {
     const userCred = await auth.signInWithEmailAndPassword(email, pass);
     const user = userCred.user;
@@ -39,8 +39,8 @@ document.getElementById('btnLogin').onclick = async () => {
 };
 
 document.getElementById('btnRegister').onclick = async () => {
-  const email = document.getElementById('email').value;
-  const pass = document.getElementById('password').value;
+  const email = document.getElementById('emailRegister').value;
+  const pass = document.getElementById('passwordRegister').value;
   const rol = document.getElementById('rol').value;
   try {
     const userCred = await auth.createUserWithEmailAndPassword(email, pass);
@@ -93,13 +93,12 @@ if (btnBorrarTodo) {
         });
       });
     }
-<<<<<<< HEAD
   };
 }
 
 // --- Botones de chat (plantilla básica) ---
 const btnSendPsico = document.getElementById('btnSendPsico');
-const msgPsico = document.getElementById('msgPsico');
+const msgPsico = document.getElementById('msgPsico1');
 if (btnSendPsico && msgPsico) {
   btnSendPsico.onclick = () => {
     const text = msgPsico.value.trim();
@@ -114,45 +113,7 @@ if (btnSendPsico && msgPsico) {
 }
 
 const btnSendCoord = document.getElementById('btnSendCoord');
-const msgCoord = document.getElementById('msgCoord');
-const selectPsico = document.getElementById('selectPsico');
-let currentPsicoId = '';
-if (btnSendCoord && msgCoord && selectPsico) {
-  selectPsico.onchange = () => {
-    currentPsicoId = selectPsico.value;
-  };
-  btnSendCoord.onclick = () => {
-    const text = msgCoord.value.trim();
-    if (!text || !currentPsicoId) return;
-    db.collection('conversaciones').doc(currentPsicoId + '_coordinador').collection('mensajes').add({
-      text,
-      userType: 'coordinador',
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    msgCoord.value = '';
-=======
->>>>>>> 68011a6 (Resuelto conflicto y limpiado app.js)
-  };
-}
-
-// --- Botones de chat (plantilla básica) ---
-const btnSendPsico = document.getElementById('btnSendPsico');
-const msgPsico = document.getElementById('msgPsico');
-if (btnSendPsico && msgPsico) {
-  btnSendPsico.onclick = () => {
-    const text = msgPsico.value.trim();
-    if (!text || !auth.currentUser) return;
-    db.collection('conversaciones').doc(auth.currentUser.uid + '_coordinador').collection('mensajes').add({
-      text,
-      userType: 'psicologo',
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    msgPsico.value = '';
-  };
-}
-
-const btnSendCoord = document.getElementById('btnSendCoord');
-const msgCoord = document.getElementById('msgCoord');
+const msgCoord = document.getElementById('msgCoord1');
 const selectPsico = document.getElementById('selectPsico');
 let currentPsicoId = '';
 if (btnSendCoord && msgCoord && selectPsico) {
@@ -170,7 +131,6 @@ if (btnSendCoord && msgCoord && selectPsico) {
     msgCoord.value = '';
   };
 }
-
 // --- Autocompletado de zonas ---
 const zonasDisponibles = [
   "Ávila Zona Sur - Arenas de San Pedro",
@@ -195,12 +155,14 @@ const zonasDisponibles = [
   "Valladolid Zona Sur - Medina/Olmedo",
   "Valladolid Zona Este - Peñafiel",
   "Zamora Zona Nordeste - Benavente",
+  "Zamora Zona Noroeste - Puebla de Sanabria",
+  "Zamora Zona Sur - Zamora"
 ];
 const zonaInput = document.getElementById('zona');
-const zonaSugerencias = document.getElementById('zonaSugerencias');
-if (zonaInput) {
+const zonaSugerencias = document.getElementById('zona-sugerencias');
+if(zonaInput && zonaSugerencias){
   zonaInput.addEventListener('input', function() {
-    const valor = this.value.toLowerCase();
+    const valor = zonaInput.value.toLowerCase();
     zonaSugerencias.innerHTML = '';
     if (!valor) {
       zonaSugerencias.style.display = 'none';
@@ -235,6 +197,7 @@ const turnoSelect = document.getElementById('turno');
 if(semanaInput && turnoSelect){
   semanaInput.addEventListener('change', function() {
     turnoSelect.innerHTML = '';
+    const base = ["Mañana", "Tarde", "Noche"];
     base.forEach(turno => {
       const opt = document.createElement('option');
       opt.value = turno;
@@ -245,17 +208,17 @@ if(semanaInput && turnoSelect){
 }
 
 // --- Guardar disponibilidad (CRUD) ---
-const formPsico = document.getElementById('formPsico');
+const formPsico = document.getElementById('formPsico1');
 if(formPsico){
   formPsico.addEventListener('submit', async e => {
     e.preventDefault();
     const registro = {
-      nombre: formPsico.nombre.value.trim(),
-      telefono: formPsico.telefono.value.trim(),
-      zona: formPsico.zona.value,
-      semana: formPsico.semana.value,
-      turno: formPsico.turno.value,
-      notas: formPsico.notas.value.trim(),
+      nombre: document.getElementById('nombre1').value.trim(),
+      telefono: document.getElementById('telefono1').value.trim(),
+      zona: document.getElementById('zona1').value,
+      semana: document.getElementById('semana1').value,
+      turno: document.getElementById('turno1').value,
+      notas: document.getElementById('notas1').value.trim(),
       userId: auth.currentUser ? auth.currentUser.uid : null
     };
     if (!registro.nombre || !registro.telefono || !registro.zona || !registro.semana || !registro.turno) {
@@ -413,130 +376,4 @@ if(btnDescargarPDF){
       doc.save('listado_psicologos.pdf');
     });
   };
-}
-
-// --- Modo local automático ---
-const LOCAL_MODE = (typeof firebase === 'undefined' || typeof firebaseConfig === 'undefined');
-
-// Utilidades para localStorage
-const LS_KEY_USERS = 'psicologos_app_usuarios';
-const LS_KEY_DISP = 'psicologos_app_disponibilidad';
-function lsGet(key) { try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; } }
-function lsSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-
-// --- Login y registro modo local ---
-if (LOCAL_MODE) {
-  document.getElementById('btnLogin').onclick = () => {
-    const email = document.getElementById('email').value;
-    const pass = document.getElementById('password').value;
-    const users = lsGet(LS_KEY_USERS);
-    const user = users.find(u => u.email === email && u.pass === pass);
-    if (user) {
-      mostrarVista(user.rol);
-      document.getElementById('loginError').textContent = '';
-    } else {
-      document.getElementById('loginError').textContent = 'Usuario o contraseña incorrectos.';
-    }
-  };
-  document.getElementById('btnRegister').onclick = () => {
-    const email = document.getElementById('email').value;
-    const pass = document.getElementById('password').value;
-    const rol = document.getElementById('rol').value;
-    let users = lsGet(LS_KEY_USERS);
-    if (users.find(u => u.email === email)) {
-      document.getElementById('loginError').textContent = 'El email ya está registrado.';
-      return;
-    }
-    users.push({ email, pass, rol });
-    lsSet(LS_KEY_USERS, users);
-    document.getElementById('loginError').textContent = 'Registro exitoso. Ahora puedes iniciar sesión.';
-    mostrarVista('login');
-  };
-  document.getElementById('btnSalirPsicologo').onclick = () => mostrarVista('login');
-  document.getElementById('btnSalirCoordinador').onclick = () => mostrarVista('login');
-}
-
-// --- CRUD y chat modo local ---
-if (LOCAL_MODE) {
-  // Guardar disponibilidad
-  const formPsico = document.getElementById('formPsico');
-  if(formPsico){
-    formPsico.addEventListener('submit', e => {
-      e.preventDefault();
-      const registro = {
-        nombre: formPsico.nombre.value.trim(),
-        telefono: formPsico.telefono.value.trim(),
-        zona: formPsico.zona.value,
-        semana: formPsico.semana.value,
-        turno: formPsico.turno.value,
-        notas: formPsico.notas.value.trim(),
-        userId: document.getElementById('email').value // usa email como id
-      };
-      if (!registro.nombre || !registro.telefono || !registro.zona || !registro.semana || !registro.turno) {
-        alert('Completa todos los campos obligatorios');
-        return;
-      }
-      let disp = lsGet(LS_KEY_DISP);
-      disp.push(registro);
-      lsSet(LS_KEY_DISP, disp);
-      formPsico.reset();
-      mostrarListadoDisponibilidad();
-    });
-  }
-
-  // Mostrar listado de disponibilidad
-  function mostrarListadoDisponibilidad(filtros={}){
-    const listaCont = document.getElementById('listadoContainer');
-    if(!listaCont) return;
-    let datos = lsGet(LS_KEY_DISP);
-    // Filtros
-    if (filtros.dia) {
-      datos = datos.filter(r => r.semana === filtros.dia);
-    }
-    if (filtros.zona) {
-      datos = datos.filter(r => r.zona === filtros.zona);
-    }
-    if (filtros.turno) {
-      datos = datos.filter(r => r.turno === filtros.turno);
-    }
-    listaCont.innerHTML = datos.map(r => `<div>${r.nombre} | ${r.zona} | ${r.telefono} | Turno: ${r.turno}${r.notas ? ' | ' + r.notas : ''}</div>`).join('');
-  }
-  window.mostrarListadoDisponibilidad = mostrarListadoDisponibilidad;
-
-  // Botón borrar todo
-  const btnBorrarTodo = document.getElementById('btnBorrarTodo');
-  if (btnBorrarTodo) {
-    btnBorrarTodo.onclick = () => {
-      if (confirm('¿Estás seguro de que quieres borrar TODOS los registros? Esta acción no se puede deshacer.')) {
-        lsSet(LS_KEY_DISP, []);
-        mostrarListadoDisponibilidad();
-      }
-    };
-  }
-
-  // Chat básico local
-  const chatPsico = document.getElementById('chatPsico');
-  const msgPsico = document.getElementById('msgPsico');
-  const btnSendPsico = document.getElementById('btnSendPsico');
-  if (btnSendPsico && msgPsico && chatPsico) {
-    btnSendPsico.onclick = () => {
-      const mensajes = lsGet('chat_psico') || [];
-      mensajes.push({text: msgPsico.value, userType: 'psicologo'});
-      lsSet('chat_psico', mensajes);
-      chatPsico.innerHTML += `<div><b>Psicólogo:</b> ${msgPsico.value}</div>`;
-      msgPsico.value = '';
-    };
-  }
-  const chatCoord = document.getElementById('chatCoord');
-  const msgCoord = document.getElementById('msgCoord');
-  const btnSendCoord = document.getElementById('btnSendCoord');
-  if (btnSendCoord && msgCoord && chatCoord) {
-    btnSendCoord.onclick = () => {
-      const mensajes = lsGet('chat_coord') || [];
-      mensajes.push({text: msgCoord.value, userType: 'coordinador'});
-      lsSet('chat_coord', mensajes);
-      chatCoord.innerHTML += `<div><b>Coordinador:</b> ${msgCoord.value}</div>`;
-      msgCoord.value = '';
-    };
-  }
 }
