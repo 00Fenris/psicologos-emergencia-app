@@ -34,16 +34,32 @@ const showSuccess = (message) => {
 };
 
 const ocultarTodasLasVistas = () => {
-  ['login', 'admin', 'coordinador', 'psicologo'].forEach(id => {
+  ['login', 'panelAdmin', 'vistaCoordinador', 'vistaPsicologo'].forEach(id => {
     const elemento = document.getElementById(id);
-    if (elemento) elemento.style.display = 'none';
+    if (elemento) {
+      elemento.style.display = 'none';
+      elemento.classList.add('hidden');
+    }
   });
 };
 
 const mostrarVista = (vista) => {
   ocultarTodasLasVistas();
-  const elemento = document.getElementById(vista);
-  if (elemento) elemento.style.display = 'block';
+  
+  // Mapear vistas a IDs correctos
+  const vistaMap = {
+    'admin': 'panelAdmin',
+    'coordinador': 'vistaCoordinador', 
+    'psicologo': 'vistaPsicologo',
+    'login': 'login'
+  };
+  
+  const vistaId = vistaMap[vista] || vista;
+  const elemento = document.getElementById(vistaId);
+  if (elemento) {
+    elemento.style.display = 'block';
+    elemento.classList.remove('hidden');
+  }
   
   // Cargar contenido específico según la vista
   if (vista === 'coordinador') cargarCoordinador();
@@ -68,10 +84,91 @@ const logout = () => {
 // === CONFIGURACIÓN DE BOTONES ===
 const setupEventListeners = () => {
   // Botones de logout
-  ['btnSalirPsicologo', 'btnSalirCoordinador'].forEach(id => {
+  ['btnSalirPsicologo', 'btnSalirCoordinador', 'btnSalirAdmin'].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) btn.addEventListener('click', logout);
   });
+
+  // Botón principal de login
+  const btnLogin = document.getElementById('btnLogin');
+  if (btnLogin) {
+    btnLogin.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('emailLogin')?.value;
+      const password = document.getElementById('passwordLogin')?.value;
+      
+      if (!email || !password) {
+        showError('Email y contraseña son obligatorios');
+        return;
+      }
+      
+      try {
+        if (typeof firebase !== 'undefined') {
+          await auth.signInWithEmailAndPassword(email, password);
+        }
+        const rol = determinarRolPorEmail(email);
+        mostrarVista(rol);
+      } catch (error) {
+        showError('Error de autenticación: ' + error.message);
+      }
+    });
+  }
+
+  // Botón de registro
+  const btnRegister = document.getElementById('btnRegister');
+  if (btnRegister) {
+    btnRegister.addEventListener('click', async (e) => {
+      e.preventDefault();
+      
+      const registerFields = document.getElementById('registerFields');
+      if (registerFields.style.display === 'none' || !registerFields.style.display) {
+        registerFields.style.display = 'block';
+        btnRegister.textContent = 'Confirmar Registro';
+        return;
+      }
+      
+      const email = document.getElementById('emailRegister')?.value;
+      const password = document.getElementById('passwordRegister')?.value;
+      
+      if (!email || !password) {
+        showError('Email y contraseña son obligatorios para el registro');
+        return;
+      }
+      
+      try {
+        if (typeof firebase !== 'undefined') {
+          const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+          await userCredential.user.updateProfile({ displayName: 'Psicólogo' });
+        }
+        showSuccess('Registro exitoso');
+        mostrarVista('psicologo');
+      } catch (error) {
+        showError('Error en registro: ' + error.message);
+      }
+    });
+  }
+
+  // Tabs de navegación
+  const tabUsuarios = document.getElementById('tabUsuarios');
+  const tabAdmin = document.getElementById('tabAdmin');
+  const panelUsuarios = document.getElementById('panelUsuarios');
+  const panelAdminTab = document.getElementById('panelAdminTab');
+  
+  if (tabUsuarios && tabAdmin && panelUsuarios && panelAdminTab) {
+    tabUsuarios.addEventListener('click', () => {
+      tabUsuarios.classList.add('active');
+      tabAdmin.classList.remove('active');
+      panelUsuarios.classList.add('active');
+      panelAdminTab.classList.remove('active');
+    });
+    
+    tabAdmin.addEventListener('click', () => {
+      tabAdmin.classList.add('active');
+      tabUsuarios.classList.remove('active');
+      panelAdminTab.classList.add('active');
+      panelUsuarios.classList.remove('active');
+    });
+  }
 
   // Botón crear coordinador
   const btnCrearCoordinador = document.getElementById('btnCrearCoordinador');
@@ -153,6 +250,75 @@ const setupEventListeners = () => {
       }
     });
   }
+
+  // Botones de envío de mensajes
+  const btnSendPsico = document.getElementById('btnSendPsico');
+  const msgPsico = document.getElementById('msgPsico1');
+  if (btnSendPsico && msgPsico) {
+    btnSendPsico.addEventListener('click', () => {
+      const message = msgPsico.value.trim();
+      if (!message) return;
+      
+      const chatContainer = document.getElementById('chat-psicologo');
+      if (chatContainer) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message sent';
+        messageElement.innerHTML = `
+          <div class="message-content">${message}</div>
+          <div class="message-time">${new Date().toLocaleTimeString()}</div>
+        `;
+        chatContainer.appendChild(messageElement);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+      msgPsico.value = '';
+    });
+  }
+
+  // Botón enviar coordinador
+  const btnSendCoord = document.getElementById('btnSendCoord');
+  const msgCoord = document.getElementById('msgCoord1');
+  if (btnSendCoord && msgCoord) {
+    btnSendCoord.addEventListener('click', () => {
+      const message = msgCoord.value.trim();
+      if (!message) return;
+      
+      const chatContainer = document.getElementById('chat-coordinador');
+      if (chatContainer) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message sent';
+        messageElement.innerHTML = `
+          <div class="message-content">${message}</div>
+          <div class="message-time">${new Date().toLocaleTimeString()}</div>
+        `;
+        chatContainer.appendChild(messageElement);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+      msgCoord.value = '';
+    });
+  }
+
+  // Botón enviar admin
+  const btnSendAdmin = document.getElementById('btnSendAdmin');
+  const msgAdmin = document.getElementById('msgAdmin1');
+  if (btnSendAdmin && msgAdmin) {
+    btnSendAdmin.addEventListener('click', () => {
+      const message = msgAdmin.value.trim();
+      if (!message) return;
+      
+      const chatContainer = document.getElementById('chat-coordinador-admin');
+      if (chatContainer) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message sent';
+        messageElement.innerHTML = `
+          <div class="message-content">${message}</div>
+          <div class="message-time">${new Date().toLocaleTimeString()}</div>
+        `;
+        chatContainer.appendChild(messageElement);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+      msgAdmin.value = '';
+    });
+  }
 };
 
 // === CONFIGURACIÓN ADMIN ===
@@ -199,32 +365,6 @@ const setupAdminAccess = () => {
 };
 
 // === CHAT PSICÓLOGO ===
-const setupChatPsicologo = () => {
-  const btnSendPsico = document.getElementById('btnSendPsico');
-  const msgPsico = document.getElementById('msgPsico1');
-  
-  if (btnSendPsico && msgPsico) {
-    btnSendPsico.addEventListener('click', () => {
-      const message = msgPsico.value.trim();
-      if (!message) return;
-      
-      const chatContainer = document.getElementById('chat-psicologo');
-      if (chatContainer) {
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message sent';
-        messageElement.innerHTML = `
-          <div class="message-content">${message}</div>
-          <div class="message-time">${new Date().toLocaleTimeString()}</div>
-        `;
-        chatContainer.appendChild(messageElement);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-      
-      msgPsico.value = '';
-    });
-  }
-};
-
 const cargarChatPsicologo = () => {
   const chatContainer = document.getElementById('chat-psicologo');
   if (!chatContainer) return;
@@ -249,40 +389,6 @@ const cargarChatPsicologo = () => {
 };
 
 // === CHAT COORDINADOR ===
-const setupChatCoordinador = () => {
-  const btnSendCoord = document.getElementById('btnSendCoord');
-  const msgCoord = document.getElementById('msgCoord1');
-  const selectPsico = document.getElementById('selectPsico');
-  
-  if (btnSendCoord && msgCoord) {
-    btnSendCoord.addEventListener('click', () => {
-      const message = msgCoord.value.trim();
-      if (!message) return;
-      
-      const chatContainer = document.getElementById('chat-coordinador');
-      if (chatContainer) {
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message sent';
-        messageElement.innerHTML = `
-          <div class="message-content">${message}</div>
-          <div class="message-time">${new Date().toLocaleTimeString()}</div>
-        `;
-        chatContainer.appendChild(messageElement);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-      
-      msgCoord.value = '';
-    });
-  }
-  
-  if (selectPsico) {
-    selectPsico.addEventListener('change', (e) => {
-      currentPsicoId = e.target.value;
-      cargarChatCoordinador();
-    });
-  }
-};
-
 const cargarChatCoordinador = () => {
   // Cargar estadísticas demo
   mostrarEstadisticasDemo();
@@ -299,6 +405,18 @@ const cargarChatCoordinador = () => {
     selectPsico.innerHTML = '<option value="">Seleccionar psicólogo...</option>';
     todosPsicologos.forEach(p => {
       selectPsico.innerHTML += `<option value="${p.id}">${p.nombre} - ${p.zona}</option>`;
+    });
+    
+    // Event listener para cambio de psicólogo
+    selectPsico.addEventListener('change', (e) => {
+      currentPsicoId = e.target.value;
+      if (currentPsicoId) {
+        const chatContainer = document.getElementById('chat-coordinador');
+        if (chatContainer) {
+          chatContainer.innerHTML = '<div class="message received"><div class="message-content">Chat iniciado con ' + 
+            todosPsicologos.find(p => p.id === currentPsicoId)?.nombre + '</div></div>';
+        }
+      }
     });
   }
 };
@@ -376,21 +494,6 @@ const mostrarEstadisticasZonasDemo = () => {
 };
 
 // === CHAT ADMIN-COORDINADORES ===
-const setupChatAdmin = () => {
-  const selectCoordinador = document.getElementById('selectCoordinador');
-  if (selectCoordinador) {
-    selectCoordinador.addEventListener('change', (e) => {
-      const selectedValue = e.target.value;
-      if (selectedValue) {
-        const [id, email] = selectedValue.split('|');
-        currentCoordinadorId = id;
-        currentCoordinadorEmail = email;
-        cargarChatAdmin();
-      }
-    });
-  }
-};
-
 const cargarChatAdmin = () => {
   // Cargar coordinadores demo
   const coordinadores = [
@@ -404,57 +507,41 @@ const cargarChatAdmin = () => {
     coordinadores.forEach(c => {
       select.innerHTML += `<option value="${c.id}|${c.email}">${c.nombre} (${c.email})</option>`;
     });
-  }
-  
-  // Cargar chat demo
-  const chatContainer = document.getElementById('chat-admin');
-  if (chatContainer && currentCoordinadorId) {
-    const mensajes = [
-      { texto: 'Hola, necesito reportar la situación actual', esAdmin: false, hora: '14:30' },
-      { texto: '¿Qué está pasando? Dame los detalles', esAdmin: true, hora: '14:31' },
-      { texto: 'Tenemos 3 emergencias activas en la zona norte', esAdmin: false, hora: '14:32' }
-    ];
     
-    chatContainer.innerHTML = '';
-    mensajes.forEach(msg => {
-      const messageElement = document.createElement('div');
-      messageElement.className = msg.esAdmin ? 'message sent' : 'message received';
-      messageElement.innerHTML = `
-        <div class="message-content">${msg.texto}</div>
-        <div class="message-time">${msg.hora}</div>
-      `;
-      chatContainer.appendChild(messageElement);
+    // Event listener para cambio de coordinador
+    select.addEventListener('change', (e) => {
+      const selectedValue = e.target.value;
+      if (selectedValue) {
+        const [id, email] = selectedValue.split('|');
+        currentCoordinadorId = id;
+        currentCoordinadorEmail = email;
+        
+        // Cargar chat demo
+        const chatContainer = document.getElementById('chat-admin');
+        if (chatContainer) {
+          const mensajes = [
+            { texto: 'Hola, necesito reportar la situación actual', esAdmin: false, hora: '14:30' },
+            { texto: '¿Qué está pasando? Dame los detalles', esAdmin: true, hora: '14:31' },
+            { texto: 'Tenemos 3 emergencias activas en la zona norte', esAdmin: false, hora: '14:32' }
+          ];
+          
+          chatContainer.innerHTML = '';
+          mensajes.forEach(msg => {
+            const messageElement = document.createElement('div');
+            messageElement.className = msg.esAdmin ? 'message sent' : 'message received';
+            messageElement.innerHTML = `
+              <div class="message-content">${msg.texto}</div>
+              <div class="message-time">${msg.hora}</div>
+            `;
+            chatContainer.appendChild(messageElement);
+          });
+        }
+      }
     });
   }
 };
 
 // === CHAT COORDINADOR CON ADMIN ===
-const setupChatCoordinadorAdmin = () => {
-  const btnSendAdmin = document.getElementById('btnSendAdmin');
-  const msgAdmin = document.getElementById('msgAdmin1');
-  
-  if (btnSendAdmin && msgAdmin) {
-    btnSendAdmin.addEventListener('click', () => {
-      const message = msgAdmin.value.trim();
-      if (!message) return;
-      
-      const chatContainer = document.getElementById('chat-coordinador-admin');
-      if (chatContainer) {
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message sent';
-        messageElement.innerHTML = `
-          <div class="message-content">${message}</div>
-          <div class="message-time">${new Date().toLocaleTimeString()}</div>
-        `;
-        chatContainer.appendChild(messageElement);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-      
-      msgAdmin.value = '';
-    });
-  }
-};
-
 const cargarChatCoordinadorAdmin = () => {
   const chatContainer = document.getElementById('chat-coordinador-admin');
   if (!chatContainer) return;
@@ -496,10 +583,6 @@ const cargarPsicologo = () => {
 document.addEventListener('DOMContentLoaded', () => {
   setupAdminAccess();
   setupEventListeners();
-  setupChatPsicologo();
-  setupChatCoordinador();
-  setupChatAdmin();
-  setupChatCoordinadorAdmin();
   
   // Mostrar vista inicial
   mostrarVista('login');
