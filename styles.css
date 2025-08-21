@@ -109,3 +109,25 @@ li {
   box-shadow: 0 1px 4px #e2e8f0;
 }
 
+.stat-card {
+  background: #f7fafc;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+}
+.stat-card h4 {
+  margin: 0 0 10px 0;
+  color: #4a5568;
+  font-size: 0.9em;
+}
+#filtroTurnoPsico label {
+  display: inline-block;
+  margin-right: 15px;
+  margin-bottom: 10px;
+}
+#filtroTurnoPsico input[type="checkbox"] {
+  width: auto;
+  margin-right: 5px;
+}
+

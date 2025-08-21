@@ -14,13 +14,16 @@ const db = firebase.firestore();
 // --- Funciones de vistas ---
 function mostrarVista(vista) {
   document.getElementById('login').classList.add('hidden');
-  document.getElementById('acceso').classList.add('hidden');
   document.getElementById('vistaPsicologo').classList.add('hidden');
   document.getElementById('vistaCoordinador').classList.add('hidden');
+  document.getElementById('panelAdmin').classList.add('hidden');
   if (vista === 'psicologo') document.getElementById('vistaPsicologo').classList.remove('hidden');
   if (vista === 'coordinador') document.getElementById('vistaCoordinador').classList.remove('hidden');
   if (vista === 'login') document.getElementById('login').classList.remove('hidden');
-  if (vista === 'acceso') document.getElementById('acceso').classList.remove('hidden');
+  if (vista === 'panelAdmin') {
+    document.getElementById('panelAdmin').classList.remove('hidden');
+    cargarEstadisticas();
+  }
 }
 
 // --- Login y registro ---
@@ -56,6 +59,14 @@ document.getElementById('btnLogin').onclick = async () => {
   }
 };
 
+// Determinar rol basado en el dominio del email
+function determinarRolPorEmail(email) {
+  // Dominios de coordinadores (puedes añadir más)
+  const dominiosCoordinadores = ['admin.psico.es', 'coord.psico.es', 'administracion.psico.es'];
+  const dominio = email.split('@')[1];
+  return dominiosCoordinadores.includes(dominio) ? 'coordinador' : 'psicologo';
+}
+
 document.getElementById('btnRegister').onclick = async () => {
   // Mostrar campos de registro si están ocultos
   const registerFields = document.getElementById('registerFields');
@@ -66,7 +77,6 @@ document.getElementById('btnRegister').onclick = async () => {
   
   const email = document.getElementById('emailRegister').value.trim();
   const pass = document.getElementById('passwordRegister').value;
-  const rol = document.getElementById('rol').value;
   
   // Validar email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -81,10 +91,13 @@ document.getElementById('btnRegister').onclick = async () => {
     return;
   }
   
+  // El rol se determina automáticamente como 'psicologo' para registro público
+  const rol = 'psicologo';
+  
   try {
     const userCred = await auth.createUserWithEmailAndPassword(email, pass);
     const user = userCred.user;
-    await db.collection('usuarios').doc(user.uid).set({ rol });
+    await db.collection('usuarios').doc(user.uid).set({ rol, email });
     document.getElementById('loginError').textContent = 'Registro exitoso. Ahora puedes iniciar sesión.';
     document.getElementById('loginError').style.color = 'green';
     registerFields.style.display = 'none';
@@ -105,9 +118,62 @@ function logout() {
 document.getElementById('btnSalirPsicologo').onclick = logout;
 document.getElementById('btnSalirCoordinador').onclick = logout;
 
-// --- Cambio de vistas desde acceso ---
-document.getElementById('btnPsicologo').onclick = () => mostrarVista('psicologo');
-document.getElementById('btnCoordinador').onclick = () => mostrarVista('coordinador');
+// --- Panel Admin ---
+document.getElementById('btnAdminAccess').onclick = () => mostrarVista('panelAdmin');
+document.getElementById('btnSalirAdmin').onclick = logout;
+
+// Crear coordinador desde panel admin
+document.getElementById('btnCrearCoordinador').onclick = async () => {
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass = document.getElementById('adminPassword').value;
+  
+  if (!email || !pass) {
+    document.getElementById('adminError').textContent = 'Completa todos los campos.';
+    return;
+  }
+  
+  try {
+    const userCred = await auth.createUserWithEmailAndPassword(email, pass);
+    const user = userCred.user;
+    await db.collection('usuarios').doc(user.uid).set({ 
+      rol: 'coordinador',
+      email: email,
+      creadoPor: 'admin',
+      fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('adminError').textContent = 'Coordinador creado exitosamente.';
+    document.getElementById('adminError').style.color = 'green';
+    document.getElementById('adminEmail').value = '';
+    document.getElementById('adminPassword').value = '';
+    // Cerrar sesión del admin para que el coordinador pueda loguearse
+    await auth.signOut();
+    cargarEstadisticas();
+  } catch (e) {
+    document.getElementById('adminError').textContent = e.message;
+    document.getElementById('adminError').style.color = 'red';
+  }
+};
+
+// Login coordinador desde panel admin
+document.getElementById('btnLoginCoord').onclick = async () => {
+  const email = document.getElementById('coordEmail').value.trim();
+  const pass = document.getElementById('coordPassword').value;
+  
+  try {
+    const userCred = await auth.signInWithEmailAndPassword(email, pass);
+    const user = userCred.user;
+    const doc = await db.collection('usuarios').doc(user.uid).get();
+    if (doc.exists && doc.data().rol === 'coordinador') {
+      mostrarVista('coordinador');
+    } else {
+      document.getElementById('adminError').textContent = 'Este usuario no es coordinador.';
+      document.getElementById('adminError').style.color = 'red';
+    }
+  } catch (e) {
+    document.getElementById('adminError').textContent = e.message;
+    document.getElementById('adminError').style.color = 'red';
+  }
+};
 
 // --- Mantener sesión ---
 auth.onAuthStateChanged(async user => {
@@ -115,7 +181,6 @@ auth.onAuthStateChanged(async user => {
     const doc = await db.collection('usuarios').doc(user.uid).get();
     const rol = doc.exists ? doc.data().rol : 'psicologo';
     mostrarVista(rol);
-    document.getElementById('acceso').style.display = 'none';
   } else {
     mostrarVista('login');
     document.getElementById('acceso').style.display = '';
@@ -156,10 +221,101 @@ if (btnSendPsico && msgPsico) {
   };
 }
 
+// --- Chat coordinador con filtros múltiples ---
 const btnSendCoord = document.getElementById('btnSendCoord');
 const msgCoord = document.getElementById('msgCoord1');
 const selectPsico = document.getElementById('selectPsico');
 let currentPsicoId = '';
+let todosPsicologos = [];
+
+// Cargar estadísticas para panel admin
+async function cargarEstadisticas() {
+  try {
+    const usuariosSnap = await db.collection('usuarios').get();
+    let psicologos = 0, coordinadores = 0;
+    
+    usuariosSnap.forEach(doc => {
+      const data = doc.data();
+      if (data.rol === 'psicologo') psicologos++;
+      if (data.rol === 'coordinador') coordinadores++;
+    });
+    
+    // Registros de esta semana
+    const inicioSemana = new Date();
+    inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+    inicioSemana.setHours(0, 0, 0, 0);
+    
+    const registrosSnap = await db.collection('disponibilidad')
+      .where('timestamp', '>=', inicioSemana)
+      .get();
+    
+    document.getElementById('statPsicologos').textContent = psicologos;
+    document.getElementById('statCoordinadores').textContent = coordinadores;
+    document.getElementById('statSemana').textContent = registrosSnap.size;
+  } catch (e) {
+    console.error('Error cargando estadísticas:', e);
+  }
+}
+
+// Cargar psicólogos para el selector
+async function cargarPsicologos() {
+  try {
+    const disponibilidadSnap = await db.collection('disponibilidad').get();
+    const psicologosMap = new Map();
+    
+    disponibilidadSnap.forEach(doc => {
+      const data = doc.data();
+      const key = data.nombre + '_' + data.telefono;
+      if (!psicologosMap.has(key)) {
+        psicologosMap.set(key, {
+          nombre: data.nombre,
+          telefono: data.telefono,
+          turnos: new Set()
+        });
+      }
+      psicologosMap.get(key).turnos.add(data.turno);
+    });
+    
+    todosPsicologos = Array.from(psicologosMap.values()).map(p => ({
+      ...p,
+      turnos: Array.from(p.turnos)
+    }));
+    
+    actualizarSelectorPsicologos();
+  } catch (e) {
+    console.error('Error cargando psicólogos:', e);
+  }
+}
+
+// Actualizar selector de psicólogos basado en filtros
+function actualizarSelectorPsicologos(turnosFiltrados = []) {
+  if (!selectPsico) return;
+  
+  selectPsico.innerHTML = '<option value="">-- Selecciona un psicólogo --</option>';
+  
+  let psicologosFiltrados = todosPsicologos;
+  
+  if (turnosFiltrados.length > 0) {
+    psicologosFiltrados = todosPsicologos.filter(p => 
+      turnosFiltrados.some(turno => p.turnos.includes(turno))
+    );
+  }
+  
+  psicologosFiltrados.forEach(p => {
+    const option = document.createElement('option');
+    option.value = p.telefono;
+    option.textContent = `${p.nombre} (${p.turnos.join(', ')})`;
+    selectPsico.appendChild(option);
+  });
+}
+
+// Filtro de turnos para psicólogos
+document.getElementById('btnFiltrarPsico').onclick = () => {
+  const checkboxes = document.querySelectorAll('#filtroTurnoPsico input[type="checkbox"]:checked');
+  const turnosSeleccionados = Array.from(checkboxes).map(cb => cb.value);
+  actualizarSelectorPsicologos(turnosSeleccionados);
+};
+
 if (btnSendCoord && msgCoord && selectPsico) {
   selectPsico.onchange = () => {
     currentPsicoId = selectPsico.value;
@@ -174,6 +330,9 @@ if (btnSendCoord && msgCoord && selectPsico) {
     });
     msgCoord.value = '';
   };
+  
+  // Cargar psicólogos al inicio
+  cargarPsicologos();
 }
 // --- Autocompletado de zonas ---
 const zonasDisponibles = [

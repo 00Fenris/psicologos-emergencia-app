@@ -17,21 +17,23 @@
   <!-- Bloque de login y registro -->
   <div id="login" class="center">
     <div class="card">
-      <h2>Acceso</h2>
+      <h2>Acceso Psicólogos</h2>
       <input id="emailLogin" type="email" placeholder="Email" autocomplete="email" />
       <input id="passwordLogin" type="password" placeholder="Contraseña" autocomplete="current-password" />
-      <select id="rol">
-        <option value="psicologo">Psicólogo</option>
-        <option value="coordinador">Coordinador</option>
-      </select>
       <button id="btnLogin">Entrar</button>
-      <button id="btnRegister">Registrarse</button>
+      <button id="btnRegister">Registrarse como Psicólogo</button>
       <div id="loginError" style="color:red"></div>
       
       <!-- Campos adicionales para registro (ocultos por defecto) -->
       <div id="registerFields" style="display:none; margin-top:10px;">
         <input id="emailRegister" type="email" placeholder="Email para registro" />
         <input id="passwordRegister" type="password" placeholder="Contraseña para registro" />
+      </div>
+      
+      <!-- Acceso admin para coordinadores -->
+      <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
+        <h3>Acceso Coordinadores</h3>
+        <button id="btnAdminAccess" style="background:#e53e3e;">Panel Administrativo</button>
       </div>
     </div>
   </div>
@@ -102,11 +104,61 @@
     </div>
     <div class="card" style="max-width:600px;margin:20px auto;">
       <h3>Chat con Psicólogos</h3>
+      <label for="filtroTurnoPsico">Filtrar psicólogos por turno:</label>
+      <div id="filtroTurnoPsico" style="margin-bottom:10px;">
+        <label><input type="checkbox" value="Mañana"> Mañana</label>
+        <label><input type="checkbox" value="Tarde"> Tarde</label>
+        <label><input type="checkbox" value="Noche"> Noche</label>
+        <button id="btnFiltrarPsico" class="small">Aplicar Filtro</button>
+      </div>
       <label for="selectPsico">Selecciona psicólogo:</label>
       <select id="selectPsico" style="width:100%;margin-bottom:10px"></select>
       <div id="chatCoord" class="chat"></div>
       <input id="msgCoord1" type="text" placeholder="Escribe tu mensaje..." style="width:80%" />
       <button id="btnSendCoord" class="small">Enviar</button>
+    </div>
+  </div>
+
+  <!-- Panel Admin para Coordinadores -->
+  <div id="panelAdmin" class="hidden">
+    <header>
+      <h1>Panel Administrativo - Coordinadores</h1>
+      <button id="btnSalirAdmin" style="float:right;background:#718096;">Salir</button>
+    </header>
+    <div class="card" style="max-width:800px;margin:0 auto;">
+      <h2>Gestión de Coordinadores</h2>
+      <div style="display:flex;gap:20px;margin-bottom:20px;">
+        <div style="flex:1;">
+          <h3>Registrar Nuevo Coordinador</h3>
+          <input id="adminEmail" type="email" placeholder="Email del coordinador" style="width:100%;margin-bottom:10px;" />
+          <input id="adminPassword" type="password" placeholder="Contraseña" style="width:100%;margin-bottom:10px;" />
+          <button id="btnCrearCoordinador" style="background:#38a169;">Crear Coordinador</button>
+          <div id="adminError" style="color:red;margin-top:10px;"></div>
+        </div>
+        <div style="flex:1;">
+          <h3>Login Coordinador</h3>
+          <input id="coordEmail" type="email" placeholder="Email coordinador" style="width:100%;margin-bottom:10px;" />
+          <input id="coordPassword" type="password" placeholder="Contraseña" style="width:100%;margin-bottom:10px;" />
+          <button id="btnLoginCoord" style="background:#4299e1;">Acceder como Coordinador</button>
+        </div>
+      </div>
+      <div style="margin-top:30px;">
+        <h3>Estadísticas</h3>
+        <div id="statsPanel" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+          <div class="stat-card">
+            <h4>Psicólogos Registrados</h4>
+            <div id="statPsicologos" style="font-size:2em;color:#38a169;">0</div>
+          </div>
+          <div class="stat-card">
+            <h4>Coordinadores</h4>
+            <div id="statCoordinadores" style="font-size:2em;color:#4299e1;">0</div>
+          </div>
+          <div class="stat-card">
+            <h4>Registros Esta Semana</h4>
+            <div id="statSemana" style="font-size:2em;color:#ed8936;">0</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </body>
