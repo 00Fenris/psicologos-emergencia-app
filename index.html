@@ -28,9 +28,639 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+  // Tu configuración de Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyA59Jl1NsshafjLVzuQswpc3-4BsGUgIBI",
+    authDomain: "proyecto-psicologos-7f53f.firebaseapp.com",
+    projectId: "proyecto-psicologos-7f53f",
+    storageBucket: "proyecto-psicologos-7f53f.appspot.com",
+    messagingSenderId: "1032754415458",
+    appId: "1:1032754415458:web:e0975b2549ec1373584e3b",
+    measurementId: "G-DBBG2CJFQ7"
+  };
+
+  // Inicializa Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+function mostrarVista(vista) {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('acceso')?.classList.add('hidden');
+  document.getElementById('vistaPsicologo')?.classList.add('hidden');
+  document.getElementById('vistaCoordinador')?.classList.add('hidden');
+  if (vista === 'psicologo') document.getElementById('vistaPsicologo').classList.remove('hidden');
+  if (vista === 'coordinador') document.getElementById('vistaCoordinador').classList.remove('hidden');
+  if (vista === 'login') document.getElementById('login').classList.remove('hidden');
+}
+
+// Login y registro
+document.getElementById('btnLogin').onclick = async () => {
+  const email = document.getElementById('email').value;
+  const pass = document.getElementById('password').value;
+  try {
+    const userCred = await auth.signInWithEmailAndPassword(email, pass);
+    const user = userCred.user;
+    // Obtén el rol del usuario
+    const doc = await db.collection('usuarios').doc(user.uid).get();
+    const rol = doc.exists ? doc.data().rol : 'psicologo';
+    mostrarVista(rol);
+  } catch (e) {
+    document.getElementById('loginError').textContent = e.message;
+  }
+};
+
+document.getElementById('btnRegister').onclick = async () => {
+  const email = document.getElementById('email').value;
+  const pass = document.getElementById('password').value;
+  const rol = document.getElementById('rol').value;
+  try {
+    const userCred = await auth.createUserWithEmailAndPassword(email, pass);
+    const user = userCred.user;
+    // Guarda el rol en Firestore
+    await db.collection('usuarios').doc(user.uid).set({ rol });
+    mostrarVista(rol);
+  } catch (e) {
+    document.getElementById('loginError').textContent = e.message;
+  }
+};
+
+// Cerrar sesión
+function logout() {
+  auth.signOut();
+  mostrarVista('login');
+}
+document.getElementById('btnSalirPsicologo').onclick = logout;
+document.getElementById('btnSalirCoordinador').onclick = logout;
+
+// Mostrar login al cargar
+mostrarVista('login');
+
+// Mantener sesión
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    const doc = await db.collection('usuarios').doc(user.uid).get();
+    const rol = doc.exists ? doc.data().rol : 'psicologo';
+    mostrarVista(rol);
+  } else {
+    mostrarVista('login');
+  }
+});
+</script>
 </head>
 <body>
-<!-- ...todo el contenido y JS de la app aquí... -->
-</body>
-</html>
+  <!-- Bloque de login y registro -->
+<div id="login" class="center">
+  <div class="card">
+    <h2>Acceso</h2>
+    <input id="email" type="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Contraseña" />
+    <select id="rol">
+      <option value="psicologo">Psicólogo</option>
+      <option value="coordinador">Coordinador</option>
+    </select>
+    <button id="btnLogin">Entrar</button>
+    <button id="btnRegister">Registrarse</button>
+    <div id="loginError" style="color:red"></div>
+  </div>
+</div>
+  <!-- Página de acceso -->
+  <div id="acceso" class="center">
+    <div class="card">
+      <h2>¿Cómo quieres acceder?</h2>
+      <button id="btnPsicologo">Soy Psicólogo</button>
+      <button id="btnCoordinador">Soy Coordinador</button>
+    </div>
+  </div>
+
+  <!-- Vista Psicólogo -->
+  <div id="vistaPsicologo" class="hidden">
+    <header>
+      <h1>Registro de disponibilidad</h1>
+      <button id="btnSalirPsicologo" style="float:right;background:#718096;">Salir</button>
+    </header>
+    <div class="card" style="max-width:400px;margin:0 auto;">
+      <form id="formPsico" autocomplete="off">
+        <label for="nombre">Nombre completo</label>
+        <input id="nombre" name="nombre" type="text" required />
+        <label for="telefono">Teléfono</label>
+        <input id="telefono" name="telefono" type="tel" placeholder="Ej: +34 600 123 456" required />
+        <label for="zona">Zona</label>
+        <input id="zona" name="zona" type="text" required autocomplete="off" />
+        <div id="zona-sugerencias" style="background:#fff;border:1px solid #e6e9ee;max-height:120px;overflow:auto;position:absolute;z-index:10;border-radius:8px;display:none"></div>
+        <label for="semana">Semana</label>
+        <input id="semana" name="semana" type="week" required />
+        <label for="turno">Turno</label>
+        <select id="turno" name="turno" required>
+          <option value="">-- Selecciona un turno --</option>
+          <option>Mañana</option>
+          <option>Tarde</option>
+          <option>Noche</option>
+        </select>
+        <label for="notas">Notas (opcional)</label>
+        <input id="notas" name="notas" type="text" />
+        <button type="submit">Guardar</button>
+      </form>
+    </div>
+    <div class="card" style="max-width:400px;margin:20px auto;">
+      <h3>Chat con Coordinador</h3>
+      <div id="chatPsico" style="height:180px;overflow:auto;background:#f1f5f9;padding:10px;border-radius:8px;margin-bottom:10px"></div>
+      <input id="msgPsico" type="text" placeholder="Escribe tu mensaje..." style="width:80%" />
+      <button id="btnSendPsico" class="small">Enviar</button>
+    </div>
+  </div>
+
+  <!-- Vista Coordinador -->
+  <div id="vistaCoordinador" class="hidden">
+    <header>
+      <h1>Coordinador — Vista</h1>
+      <button id="btnSalirCoordinador" style="float:right;background:#718096;">Salir</button>
+    </header>
+    <div class="card" style="max-width:600px;margin:0 auto;">
+      <label for="filtroDia">Filtrar por día</label>
+      <input id="filtroDia" type="date" />
+      <label for="filtroZona">Filtrar por zona</label>
+      <input id="filtroZona" type="text" autocomplete="off" />
+      <div id="filtroZona-sugerencias" style="background:#fff;border:1px solid #e6e9ee;max-height:120px;overflow:auto;position:absolute;z-index:10;border-radius:8px;display:none"></div>
+      <label for="filtroTurno">Filtrar por turno</label>
+      <select id="filtroTurno">
+        <option value="">-- Todos los turnos --</option>
+        <option>Mañana</option>
+        <option>Tarde</option>
+        <option>Noche</option>
+      </select>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="btnVerTodos" class="small">Ver todos</button>
+        <button id="btnDescargarPDF" class="small" style="background:#38a169">Descargar PDF</button>
+        <button id="btnBorrarTodo" class="small btn-borrar-todo">Borrar todo</button>
+      </div>
+      <hr />
+      <div id="listadoContainer" style="max-height:460px;overflow:auto"></div>
+    </div>
+    <div class="card" style="max-width:600px;margin:20px auto;">
+      <h3>Chat con Psicólogos</h3>
+      <div id="chatCoord" style="height:180px;overflow:auto;background:#f1f5f9;padding:10px;border-radius:8px;margin-bottom:10px"></div>
+      <input id="msgCoord" type="text" placeholder="Escribe tu mensaje..." style="width:80%" />
+      <button id="btnSendCoord" class="small">Enviar</button>
+    </div>
+  </div>
+<script>
+// --- CHAT FIRESTORE ---
+function renderChat(container, mensajes, userType) {
+  container.innerHTML = '';
+  mensajes.forEach(msg => {
+    const div = document.createElement('div');
+    div.style.marginBottom = '8px';
+    div.style.textAlign = msg.userType === userType ? 'right' : 'left';
+    div.innerHTML = `<span style="background:${msg.userType === userType ? '#bee3f8' : '#fed7d7'};padding:6px 12px;border-radius:8px;display:inline-block;">${msg.text}</span>`;
+    container.appendChild(div);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+const chatPsico = document.getElementById('chatPsico');
+const chatCoord = document.getElementById('chatCoord');
+const btnSendPsico = document.getElementById('btnSendPsico');
+const btnSendCoord = document.getElementById('btnSendCoord');
+const msgPsico = document.getElementById('msgPsico');
+const msgCoord = document.getElementById('msgCoord');
+
+function listenChat(container, userType) {
+  db.collection('chat').orderBy('timestamp').onSnapshot(snapshot => {
+    const mensajes = snapshot.docs.map(doc => doc.data());
+    renderChat(container, mensajes, userType);
+  });
+}
+
+if(chatPsico) listenChat(chatPsico, 'psicologo');
+if(chatCoord) listenChat(chatCoord, 'coordinador');
+
+if(btnSendPsico && msgPsico) {
+  btnSendPsico.onclick = () => {
+    const text = msgPsico.value.trim();
+    if(!text) return;
+    db.collection('chat').add({
+      text,
+      userType: 'psicologo',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    msgPsico.value = '';
+  };
+}
+if(btnSendCoord && msgCoord) {
+  btnSendCoord.onclick = () => {
+    const text = msgCoord.value.trim();
+    if(!text) return;
+    db.collection('chat').add({
+      text,
+      userType: 'coordinador',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    msgCoord.value = '';
+  };
+}
+</script>
+
+  <!-- jsPDF CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    // Navegación entre vistas usando listeners (compatible con iPhone)
+    document.getElementById('btnPsicologo').addEventListener('click', function() {
+      document.getElementById('acceso').classList.add('hidden');
+      document.getElementById('vistaPsicologo').classList.remove('hidden');
+      document.getElementById('vistaCoordinador').classList.add('hidden');
+    });
+    document.getElementById('btnCoordinador').addEventListener('click', function() {
+      document.getElementById('acceso').classList.add('hidden');
+      document.getElementById('vistaPsicologo').classList.add('hidden');
+      document.getElementById('vistaCoordinador').classList.remove('hidden');
+    });
+    document.getElementById('btnSalirPsicologo').addEventListener('click', function() {
+      document.getElementById('acceso').classList.remove('hidden');
+      document.getElementById('vistaPsicologo').classList.add('hidden');
+      document.getElementById('vistaCoordinador').classList.add('hidden');
+    });
+    document.getElementById('btnSalirCoordinador').addEventListener('click', function() {
+      document.getElementById('acceso').classList.remove('hidden');
+      document.getElementById('vistaPsicologo').classList.add('hidden');
+      document.getElementById('vistaCoordinador').classList.add('hidden');
+    });
+
+    // --- Lógica de autocompletado y funcionalidad principal ---
+    const zonasDisponibles = [
+      "Ávila Zona Sur - Arenas de San Pedro",
+      "Ávila Zona Norte - Ávila/Arévalo",
+      "Burgos Zona Norte - Miranda de Ebro",
+      "Burgos Zona Centro - Burgos",
+      "Burgos Zona Sureste - Aranda de Duero",
+      "León Zona Suroeste - La Bañeza",
+      "León Zona Nordeste - León",
+      "León Zona Astorga",
+      "León Zona Noroeste - Bierzo",
+      "Palencia Zona Norte - Herrera de Pisuerga",
+      "Palencia Zona Sur - Palencia",
+      "Salamanca Zona Suroeste - Ciudad Rodrigo",
+      "Salamanca Zona Sureste - Béjar",
+      "Salamanca Zona Norte - Salamanca",
+      "Segovia Zona Sur - Segovia",
+      "Segovia Zona Norte - Cuéllar",
+      "Soria Zona Este - Soria",
+      "Soria Zona Oeste - Burgo de Osma",
+      "Valladolid Zona Norte - Valladolid/Rioseco",
+      "Valladolid Zona Sur - Medina/Olmedo",
+      "Valladolid Zona Este - Peñafiel",
+      "Zamora Zona Nordeste - Benavente",
+      "Zamora Zona Noroeste - Puebla de Sanabria",
+      "Zamora Zona Sur - Zamora"
+    ];
+
+    // Autocompletado para el formulario
+    const zonaInput = document.getElementById('zona');
+    const zonaSugerencias = document.getElementById('zona-sugerencias');
+    if(zonaInput){
+      zonaInput.addEventListener('input', function() {
+        const valor = zonaInput.value.toLowerCase();
+        zonaSugerencias.innerHTML = '';
+        if (!valor) {
+          zonaSugerencias.style.display = 'none';
+          return;
+        }
+        const sugerencias = zonasDisponibles.filter(z => z.toLowerCase().includes(valor));
+        if (sugerencias.length === 0) {
+          zonaSugerencias.style.display = 'none';
+          return;
+        }
+        sugerencias.forEach(zona => {
+          const div = document.createElement('div');
+          div.textContent = zona;
+          div.style.padding = '8px';
+          div.style.cursor = 'pointer';
+          div.addEventListener('mousedown', function(e) {
+            zonaInput.value = zona;
+            zonaSugerencias.style.display = 'none';
+          });
+          zonaSugerencias.appendChild(div);
+        });
+        zonaSugerencias.style.display = 'block';
+      });
+      zonaInput.addEventListener('blur', function() {
+        setTimeout(() => zonaSugerencias.style.display = 'none', 100);
+      });
+    }
+
+    // Autocompletado para el filtro del coordinador
+    const filtroZonaInput = document.getElementById('filtroZona');
+    const filtroZonaSugerencias = document.getElementById('filtroZona-sugerencias');
+    if(filtroZonaInput){
+      filtroZonaInput.addEventListener('input', function() {
+        const valor = filtroZonaInput.value.toLowerCase();
+        filtroZonaSugerencias.innerHTML = '';
+        if (!valor) {
+          filtroZonaSugerencias.style.display = 'none';
+          return;
+        }
+        const sugerencias = zonasDisponibles.filter(z => z.toLowerCase().includes(valor));
+        if (sugerencias.length === 0) {
+          filtroZonaSugerencias.style.display = 'none';
+          return;
+        }
+        sugerencias.forEach(zona => {
+          const div = document.createElement('div');
+          div.textContent = zona;
+          div.style.padding = '8px';
+          div.style.cursor = 'pointer';
+          div.addEventListener('mousedown', function(e) {
+            filtroZonaInput.value = zona;
+            filtroZonaSugerencias.style.display = 'none';
+            mostrarListadoFirestoreFirestore({ dia: filtroDia.value, zona: zona, turno: filtroTurno.value });
+          });
+          filtroZonaSugerencias.appendChild(div);
+        });
+        filtroZonaSugerencias.style.display = 'block';
+      });
+      filtroZonaInput.addEventListener('blur', function() {
+        setTimeout(() => filtroZonaSugerencias.style.display = 'none', 100);
+      });
+    }
+
+    // --- Funcionalidad principal ---
+    const jsPDF = window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : null;
+    const STORAGE_KEY = 'psicologos_por_semana_zona_turno_v2';
+    const form = document.getElementById('formPsico');
+    const listaCont = document.getElementById('listadoContainer');
+    const filtroDia = document.getElementById('filtroDia');
+    const filtroTurno = document.getElementById('filtroTurno');
+    const btnDescargarPDF = document.getElementById('btnDescargarPDF');
+    const btnBorrarTodo = document.getElementById('btnBorrarTodo');
+
+    // Carga los datos de disponibilidad de psicólogos desde localStorage.
+    // Devuelve un array de registros o un array vacío si no hay datos o ocurre un error.
+    function cargar() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      } catch (e) {
+        document.getElementById('loginError').textContent = 'Error al cargar los datos.';
+        return [];
+      }
+    }
+    function guardar(datos) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(datos));
+      } catch (e) {
+        alert('Error al guardar los datos. Puede que el almacenamiento esté lleno.');
+      }
+    }
+    function rangoSemana(weekStr) {
+      const [year, week] = weekStr.split('-W').map(Number);
+      const primerDia = new Date(year, 0, 1);
+      const diaSemana = primerDia.getDay();
+      const primerLunes = new Date(primerDia);
+      let diff = 1 - diaSemana;
+      if (diff > 0) diff -= 7;
+      primerLunes.setDate(primerDia.getDate() + diff);
+      const inicioSemana = new Date(primerLunes);
+      inicioSemana.setDate(primerLunes.getDate() + (week - 1) * 7);
+      const finSemana = new Date(inicioSemana);
+      finSemana.setDate(inicioSemana.getDate() + 6);
+      return { inicioSemana, finSemana };
+    }
+    async function mostrarListadoFirestoreFirestore({ dia = '', zona = '', turno = '' } = {}) {
+  if(!listaCont) return;
+  let snapshot = await db.collection('disponibilidad').get();
+  let datos = snapshot.docs.map(doc => doc.data());
+
+  if (dia) {
+    const filtroFecha = new Date(dia);
+    datos = datos.filter(r => {
+      const [year, week] = r.semana.split('-W').map(Number);
+      const primerDia = new Date(year, 0, 1);
+      const diaSemana = primerDia.getDay();
+      const primerLunes = new Date(primerDia);
+      let diff = 1 - diaSemana;
+      if (diff > 0) diff -= 7;
+      primerLunes.setDate(primerDia.getDate() + diff);
+      const inicioSemana = new Date(primerLunes);
+      inicioSemana.setDate(primerLunes.getDate() + (week - 1) * 7);
+      const finSemana = new Date(inicioSemana);
+      finSemana.setDate(inicioSemana.getDate() + 6);
+      return filtroFecha >= inicioSemana && filtroFecha <= finSemana;
+    });
+  }
+  if (zona) {
+    datos = datos.filter(r => r.zona === zona);
+  }
+  if (turno) {
+    datos = datos.filter(r => r.turno === turno);
+  }
+
+  listaCont.innerHTML = '';
+  if (!datos.length) {
+    listaCont.innerHTML = '<div class="empty">No hay registros.</div>';
+    return;
+  }
+  const grupos = {};
+  datos.forEach(r => {
+    grupos[r.semana] = grupos[r.semana] || [];
+    grupos[r.semana].push(r);
+  });
+  Object.keys(grupos).sort().forEach(sem => {
+    const header = document.createElement('div');
+    header.style.fontWeight = '700';
+    header.style.marginTop = '10px';
+    header.textContent = `Semana ${sem}`;
+    listaCont.appendChild(header);
+    const ul = document.createElement('ul');
+    grupos[sem].forEach((r, index) => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <div>
+          <strong>${r.nombre}</strong> — ${r.zona} — <em>${r.telefono}</em>
+          <div class="meta">Turno: ${r.turno}${r.notas ? ' · ' + r.notas : ''}</div>
+        </div>
+      `;
+      ul.appendChild(li);
+    });
+    listaCont.appendChild(ul);
+  });
+} // <-- Añadido cierre de función aquí
+function mostrarListadoFirestore({ dia = '', zona = '', turno = '' } = {}) {
+      if(!listaCont) return;
+      db.collection('disponibilidad').get().then(snapshot => {
+        let datos = snapshot.docs.map(doc => ({...doc.data(), id: doc.id}));
+        if (dia) {
+          const filtroFecha = new Date(dia);
+          datos = datos.filter(r => {
+            const { inicioSemana, finSemana } = rangoSemana(r.semana);
+            return filtroFecha >= inicioSemana && filtroFecha <= finSemana;
+          });
+        }
+        if (zona) {
+          datos = datos.filter(r => r.zona === zona);
+        }
+        if (turno) {
+          datos = datos.filter(r => r.turno === turno);
+        }
+        listaCont.innerHTML = '';
+        if (!datos.length) {
+          listaCont.innerHTML = '<div class="empty">No hay registros.</div>';
+          return;
+        }
+        const grupos = {};
+        datos.forEach(r => {
+          grupos[r.semana] = grupos[r.semana] || [];
+          grupos[r.semana].push(r);
+        });
+        Object.keys(grupos).sort().forEach(sem => {
+          const { inicioSemana, finSemana } = rangoSemana(sem);
+          const header = document.createElement('div');
+          header.style.fontWeight = '700';
+          header.style.marginTop = '10px';
+          header.textContent = `Semana ${sem} (${inicioSemana.toLocaleDateString()} - ${finSemana.toLocaleDateString()})`;
+          listaCont.appendChild(header);
+          const ul = document.createElement('ul');
+          grupos[sem].forEach((r, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+              <div>
+                <strong>${r.nombre}</strong> — ${r.zona} — <em>${r.telefono}</em>
+                <div class="meta">Turno: ${r.turno}${r.notas ? ' · ' + r.notas : ''}</div>
+              </div>
+            `;
+            const btnEliminar = document.createElement('button');
+            btnEliminar.textContent = 'Eliminar';
+            btnEliminar.className = 'btn-eliminar';
+            btnEliminar.onclick = () => {
+              eliminarRegistroFirestore(r.id);
+            };
+            li.appendChild(btnEliminar);
+            ul.appendChild(li);
+          });
+          listaCont.appendChild(ul);
+        });
+      });
+    }
+    function eliminarRegistroFirestore(id) {
+      db.collection('disponibilidad').doc(id).delete().then(() => {
+        mostrarListadoFirestoreFirestore({ dia: filtroDia.value, zona: filtroZonaInput.value, turno: filtroTurno.value });
+        mostrarListadoFirestore({ dia: filtroDia.value, zona: filtroZonaInput.value, turno: filtroTurno.value });
+      });
+    }
+    if(btnBorrarTodo){
+      btnBorrarTodo.addEventListener('click', () => {
+        // Borrar todos los registros de Firestore
+        db.collection('disponibilidad').get().then(snapshot => {
+          const batch = db.batch();
+          snapshot.forEach(doc => batch.delete(doc.ref));
+          batch.commit().then(() => {
+            mostrarListadoFirestoreFirestore({});
+            mostrarListadoFirestore({});
+          });
+        });
+      });
+if(form){
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const registro = {
+      nombre: form.nombre.value.trim(),
+      telefono: form.telefono.value.trim(),
+      zona: form.zona.value,
+      semana: form.semana.value,
+      turno: form.turno.value,
+      notas: form.notas.value.trim(),
+      userId: auth.currentUser.uid
+    };
+    if (!registro.nombre || !registro.telefono || !registro.zona || !registro.semana || !registro.turno) {
+      alert('Completa todos los campos obligatorios');
+      return;
+    }
+    try {
+      await db.collection('disponibilidad').add(registro);
+      form.reset();
+      mostrarListadoFirestoreFirestore();
+    } catch (e) {
+      alert('Error al guardar: ' + e.message);
+    }
+  });
+  if(filtroDia){
+    filtroDia.addEventListener('change', () => {
+      mostrarListadoFirestore({ dia: filtroDia.value, zona: filtroZonaInput.value, turno: filtroTurno.value });
+    });
+  }
+  if(filtroZonaInput){
+    filtroZonaInput.addEventListener('change', () => {
+      mostrarListadoFirestore({ dia: filtroDia.value, zona: filtroZonaInput.value, turno: filtroTurno.value });
+    });
+  }
+  if(filtroTurno){
+    filtroTurno.addEventListener('change', () => {
+      mostrarListadoFirestore({ dia: filtroDia.value, zona: filtroZonaInput.value, turno: filtroTurno.value });
+    });
+  }
+  if(document.getElementById('btnVerTodos')){
+    document.getElementById('btnVerTodos').addEventListener('click', () => {
+  filtroDia.value = '';
+  filtroZonaInput.value = '';
+  filtroTurno.value = '';
+  mostrarListadoFirestoreFirestore({});
+});
+    }
+    if(btnDescargarPDF){
+      btnDescargarPDF.addEventListener('click', () => {
+        db.collection('disponibilidad').get().then(snapshot => {
+          let datos = snapshot.docs.map(doc => doc.data());
+          let datosFiltrados = datos;
+          if (filtroDia.value) {
+            const filtroFecha = new Date(filtroDia.value);
+            datosFiltrados = datosFiltrados.filter(r => {
+              const { inicioSemana, finSemana } = rangoSemana(r.semana);
+              return filtroFecha >= inicioSemana && filtroFecha <= finSemana;
+            });
+          }
+          if (filtroZonaInput.value) {
+            datosFiltrados = datosFiltrados.filter(r => r.zona === filtroZonaInput.value);
+          }
+          if (filtroTurno.value) {
+            datosFiltrados = datosFiltrados.filter(r => r.turno === filtroTurno.value);
+          }
+          if (!datosFiltrados.length) {
+            alert('No hay datos para descargar con los filtros actuales.');
+            return;
+          }
+          const doc = new jsPDF();
+          doc.setFontSize(14);
+          doc.text('Listado Psicólogos de Emergencia', 14, 20);
+          let y = 30;
+          const grupos = {};
+          datosFiltrados.forEach(r => {
+            grupos[r.semana] = grupos[r.semana] || [];
+            grupos[r.semana].push(r);
+          });
+          Object.keys(grupos).sort().forEach(sem => {
+            const { inicioSemana, finSemana } = rangoSemana(sem);
+            doc.setFontSize(12);
+            doc.text(`Semana ${sem} (${inicioSemana.toLocaleDateString()} - ${finSemana.toLocaleDateString()})`, 14, y);
+            y += 8;
+            doc.setFontSize(10);
+            grupos[sem].forEach(r => {
+              const texto = `${r.nombre} | ${r.zona} | ${r.telefono} | Turno: ${r.turno}${r.notas ? ' | ' + r.notas : ''}`;
+              const splitTexto = doc.splitTextToSize(texto, 180);
+              doc.text(splitTexto, 14, y);
+              y += splitTexto.length * 7;
+              if (y > 270) {
+                doc.addPage();
+                y = 20;
+              }
+            });
+            y += 6;
+          });
+          doc.save('listado_psicologos.pdf');
+        });
+      });
+    // Inicialización
+    mostrarListadoFirestoreFirestore({});
+    }
+  }
+}
+</script>
