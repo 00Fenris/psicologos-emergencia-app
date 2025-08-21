@@ -1,11 +1,110 @@
-body { font-family: Arial, sans-serif; background: #f7fafc; margin: 0; }
-.center { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-.card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #e2e8f0; padding: 24px; margin: 12px; }
-.hidden { display: none !important; }
-input, select, button { margin: 8px 0; padding: 8px; border-radius: 6px; border: 1px solid #e2e8ee; }
-button { background: #4299e1; color: #fff; border: none; cursor: pointer; }
-button.small { padding: 4px 12px; font-size: 0.95em; }
-.btn-borrar-todo { background: #e53e3e; }
-.sugerencias { background:#fff; border:1px solid #e6e9ee; max-height:120px; overflow:auto; position:absolute; z-index:10; border-radius:8px; display:none; }
-.chat { height:180px; overflow:auto; background:#f1f5f9; padding:10px; border-radius:8px; margin-bottom:10px; }
-.empty { color: #718096; text-align: center; margin: 16px 0; }
+body {
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  background: linear-gradient(120deg, #e0eafc 0%, #cfdef3 100%);
+  margin: 0;
+  color: #2d3748;
+}
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px #b6c2d9;
+  padding: 32px 28px;
+  margin: 18px;
+  max-width: 480px;
+  width: 100%;
+  transition: box-shadow 0.2s;
+}
+.card:hover {
+  box-shadow: 0 8px 32px #a0aec0;
+}
+.hidden {
+  display: none !important;
+}
+input, select, button {
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 1em;
+  width: 100%;
+  box-sizing: border-box;
+}
+button {
+  background: linear-gradient(90deg, #4299e1 0%, #38b2ac 100%);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+button:hover {
+  background: linear-gradient(90deg, #3182ce 0%, #319795 100%);
+}
+button.small {
+  padding: 6px 16px;
+  font-size: 0.97em;
+}
+.btn-borrar-todo {
+  background: linear-gradient(90deg, #e53e3e 0%, #f56565 100%);
+}
+.btn-borrar-todo:hover {
+  background: linear-gradient(90deg, #c53030 0%, #e53e3e 100%);
+}
+.sugerencias {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  max-height: 140px;
+  overflow: auto;
+  position: absolute;
+  z-index: 10;
+  border-radius: 8px;
+  display: none;
+  box-shadow: 0 2px 8px #b6c2d9;
+}
+.chat {
+  height: 180px;
+  overflow: auto;
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #cbd5e1;
+}
+.empty {
+  color: #718096;
+  text-align: center;
+  margin: 18px 0;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+h1, h2, h3 {
+  color: #2b6cb0;
+  margin-bottom: 12px;
+}
+label {
+  font-weight: 500;
+  color: #4a5568;
+  margin-bottom: 4px;
+  display: block;
+}
+ul {
+  padding-left: 0;
+  list-style: none;
+}
+li {
+  background: #edf2f7;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px #e2e8f0;
+}
