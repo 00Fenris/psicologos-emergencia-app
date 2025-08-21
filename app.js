@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Carga la configuración de Firebase desde firebaseConfig.js (no subir este archivo al repositorio)
 // Crea un archivo 'firebaseConfig.js' con tu configuración real y agrégalo al .gitignore
 // Ejemplo:
@@ -121,6 +122,12 @@ if (btnSendCoord && msgCoord && selectPsico) {
     msgCoord.value = '';
   };
 }
+=======
+// Inicializa Firebase si no está inicializado (refuerzo)
+if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined' && !firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+>>>>>>> 6d43ab4 (Inicialización reforzada de Firebase en app.js)
 // --- Autocompletado de zonas ---
 const zonasDisponibles = [
   "Ávila Zona Sur - Arenas de San Pedro",
@@ -180,6 +187,10 @@ if(zonaInput && zonaSugerencias){
     setTimeout(() => zonaSugerencias.style.display = 'none', 100);
   });
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 6d43ab4 (Inicialización reforzada de Firebase en app.js)
 // --- Selector de turno dependiente de la fecha ---
 const semanaInput = document.getElementById('semana');
 const turnoSelect = document.getElementById('turno');
@@ -195,6 +206,10 @@ if(semanaInput && turnoSelect){
     });
   });
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 6d43ab4 (Inicialización reforzada de Firebase en app.js)
 // --- Guardar disponibilidad (CRUD) ---
 const formPsico = document.getElementById('formPsico');
 if(formPsico){
@@ -222,6 +237,10 @@ if(formPsico){
     }
   });
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 6d43ab4 (Inicialización reforzada de Firebase en app.js)
 // --- Mostrar listado de disponibilidad ---
 const listaCont = document.getElementById('listadoContainer');
 function mostrarListadoDisponibilidad(filtros={}){
@@ -282,6 +301,10 @@ function mostrarListadoDisponibilidad(filtros={}){
     });
   });
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 6d43ab4 (Inicialización reforzada de Firebase en app.js)
 // --- Filtros ---
 const filtroDia = document.getElementById('filtroDia');
 const filtroZonaInput = document.getElementById('filtroZona');
@@ -298,6 +321,10 @@ if(btnVerTodos){
     mostrarListadoDisponibilidad({});
   };
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 6d43ab4 (Inicialización reforzada de Firebase en app.js)
 // --- Exportar a PDF ---
 const btnDescargarPDF = document.getElementById('btnDescargarPDF');
 if(btnDescargarPDF){
@@ -362,3 +389,139 @@ if(btnDescargarPDF){
     });
   };
 }
+<<<<<<< HEAD
+=======
+// Carga la configuración de Firebase desde firebaseConfig.js (no subir este archivo al repositorio)
+// Crea un archivo 'firebaseConfig.js' con tu configuración real y agrégalo al .gitignore
+// Ejemplo:
+// const firebaseConfig = { ... };
+// if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+//
+// Aquí solo se inicializa si existe firebaseConfig
+if (typeof firebaseConfig !== 'undefined' && !firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// --- Funciones de vistas ---
+function mostrarVista(vista) {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('acceso').classList.add('hidden');
+  document.getElementById('vistaPsicologo').classList.add('hidden');
+  document.getElementById('vistaCoordinador').classList.add('hidden');
+  if (vista === 'psicologo') document.getElementById('vistaPsicologo').classList.remove('hidden');
+  if (vista === 'coordinador') document.getElementById('vistaCoordinador').classList.remove('hidden');
+  if (vista === 'login') document.getElementById('login').classList.remove('hidden');
+  if (vista === 'acceso') document.getElementById('acceso').classList.remove('hidden');
+}
+
+// --- Login y registro ---
+document.getElementById('btnLogin').onclick = async () => {
+  const email = document.getElementById('email').value;
+  const pass = document.getElementById('password').value;
+  try {
+    const userCred = await auth.signInWithEmailAndPassword(email, pass);
+    const user = userCred.user;
+    const doc = await db.collection('usuarios').doc(user.uid).get();
+    const rol = doc.exists ? doc.data().rol : 'psicologo';
+    mostrarVista(rol);
+  } catch (e) {
+    document.getElementById('loginError').textContent = e.message;
+  }
+};
+
+document.getElementById('btnRegister').onclick = async () => {
+  const email = document.getElementById('email').value;
+  const pass = document.getElementById('password').value;
+  const rol = document.getElementById('rol').value;
+  try {
+    const userCred = await auth.createUserWithEmailAndPassword(email, pass);
+    const user = userCred.user;
+    await db.collection('usuarios').doc(user.uid).set({ rol });
+    mostrarVista('login');
+    document.getElementById('loginError').textContent = 'Registro exitoso. Ahora puedes iniciar sesión.';
+  } catch (e) {
+    document.getElementById('loginError').textContent = e.message;
+  }
+};
+
+// --- Salir ---
+function logout() {
+  auth.signOut();
+  mostrarVista('login');
+}
+document.getElementById('btnSalirPsicologo').onclick = logout;
+document.getElementById('btnSalirCoordinador').onclick = logout;
+
+// --- Cambio de vistas desde acceso ---
+document.getElementById('btnPsicologo').onclick = () => mostrarVista('psicologo');
+document.getElementById('btnCoordinador').onclick = () => mostrarVista('coordinador');
+
+// --- Mantener sesión ---
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    const doc = await db.collection('usuarios').doc(user.uid).get();
+    const rol = doc.exists ? doc.data().rol : 'psicologo';
+    mostrarVista(rol);
+    document.getElementById('acceso').style.display = 'none';
+  } else {
+    mostrarVista('login');
+    document.getElementById('acceso').style.display = '';
+  }
+});
+
+// --- Botón Borrar Todo con confirmación ---
+const btnBorrarTodo = document.getElementById('btnBorrarTodo');
+if (btnBorrarTodo) {
+  btnBorrarTodo.onclick = () => {
+    if (confirm('¿Estás seguro de que quieres borrar TODOS los registros? Esta acción no se puede deshacer.')) {
+      db.collection('disponibilidad').get().then(snapshot => {
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        batch.commit().then(() => {
+          // Actualiza la vista si tienes función para ello
+          if (typeof mostrarListadoFirestoreFirestore === 'function') mostrarListadoFirestoreFirestore({});
+          if (typeof mostrarListadoFirestore === 'function') mostrarListadoFirestore({});
+        });
+      });
+    }
+  };
+}
+
+// --- Botones de chat (plantilla básica) ---
+const btnSendPsico = document.getElementById('btnSendPsico');
+const msgPsico = document.getElementById('msgPsico');
+if (btnSendPsico && msgPsico) {
+  btnSendPsico.onclick = () => {
+    const text = msgPsico.value.trim();
+    if (!text || !auth.currentUser) return;
+    db.collection('conversaciones').doc(auth.currentUser.uid + '_coordinador').collection('mensajes').add({
+      text,
+      userType: 'psicologo',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    msgPsico.value = '';
+  };
+}
+
+const btnSendCoord = document.getElementById('btnSendCoord');
+const msgCoord = document.getElementById('msgCoord');
+const selectPsico = document.getElementById('selectPsico');
+let currentPsicoId = '';
+if (btnSendCoord && msgCoord && selectPsico) {
+  selectPsico.onchange = () => {
+    currentPsicoId = selectPsico.value;
+  };
+  btnSendCoord.onclick = () => {
+    const text = msgCoord.value.trim();
+    if (!text || !currentPsicoId) return;
+    db.collection('conversaciones').doc(currentPsicoId + '_coordinador').collection('mensajes').add({
+      text,
+      userType: 'coordinador',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    msgCoord.value = '';
+  };
+}
+>>>>>>> 6d43ab4 (Inicialización reforzada de Firebase en app.js)
