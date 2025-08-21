@@ -142,7 +142,13 @@ function mostrarVista(vista) {
   document.getElementById('vistaPsicologo').classList.add('hidden');
   document.getElementById('vistaCoordinador').classList.add('hidden');
   document.getElementById('panelAdmin').classList.add('hidden');
-  if (vista === 'psicologo') document.getElementById('vistaPsicologo').classList.remove('hidden');
+  if (vista === 'psicologo') {
+    document.getElementById('vistaPsicologo').classList.remove('hidden');
+    // Cargar chat del psicólogo
+    setTimeout(() => {
+      cargarChatPsicologo();
+    }, 100);
+  }
   if (vista === 'coordinador') {
     document.getElementById('vistaCoordinador').classList.remove('hidden');
     // Cargar datos del coordinador
@@ -384,20 +390,117 @@ if (btnBorrarTodo) {
   };
 }
 
-// --- Botones de chat (plantilla básica) ---
+// --- Sistema de chat psicólogo-coordinador ---
 const btnSendPsico = document.getElementById('btnSendPsico');
 const msgPsico = document.getElementById('msgPsico1');
+
 if (btnSendPsico && msgPsico) {
-  btnSendPsico.onclick = () => {
+  btnSendPsico.onclick = async () => {
     const text = msgPsico.value.trim();
-    if (!text || !auth.currentUser) return;
-    db.collection('conversaciones').doc(auth.currentUser.uid + '_coordinador').collection('mensajes').add({
-      text,
-      userType: 'psicologo',
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    msgPsico.value = '';
+    if (!text) return;
+    
+    // Si no hay usuario autenticado (modo demo)
+    if (!auth.currentUser) {
+      const chatDiv = document.getElementById('chatPsico');
+      if (chatDiv) {
+        const nuevoMensaje = `
+          <div style="margin-bottom:10px;padding:8px;background:#e3f2fd;border-radius:8px;">
+            <strong>Tú:</strong> ${text}
+            <small style="color:#666;display:block;">${new Date().toLocaleTimeString()}</small>
+          </div>
+        `;
+        chatDiv.innerHTML += nuevoMensaje;
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+      }
+      msgPsico.value = '';
+      return;
+    }
+    
+    // Modo real con Firebase
+    try {
+      await db.collection('chats_psicologo_coordinador')
+        .doc(auth.currentUser.uid + '_coordinador')
+        .collection('mensajes')
+        .add({
+          text,
+          senderId: auth.currentUser.uid,
+          senderType: 'psicologo',
+          senderName: auth.currentUser.displayName || 'Psicólogo',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      
+      msgPsico.value = '';
+    } catch (error) {
+      console.error('Error enviando mensaje:', error);
+    }
   };
+  
+  // Enviar con Enter
+  msgPsico.onkeypress = (e) => {
+    if (e.key === 'Enter') {
+      btnSendPsico.click();
+    }
+  };
+}
+
+// Cargar chat del psicólogo cuando entra a su vista
+function cargarChatPsicologo() {
+  if (!auth.currentUser) {
+    // Modo demo para psicólogos sin autenticación
+    const chatDiv = document.getElementById('chatPsico');
+    if (chatDiv) {
+      chatDiv.innerHTML = `
+        <div style="margin-bottom:10px;padding:8px;background:#f1f8e9;border-radius:8px;">
+          <strong>Coordinador:</strong> Hola! ¿Cómo está todo en tu zona hoy?
+          <small style="color:#666;display:block;">09:30 AM</small>
+        </div>
+        <div style="margin-bottom:10px;padding:8px;background:#e3f2fd;border-radius:8px;">
+          <strong>Tú:</strong> Todo bien, preparado para las consultas de esta mañana.
+          <small style="color:#666;display:block;">09:35 AM</small>
+        </div>
+        <div style="margin-bottom:10px;padding:8px;background:#f1f8e9;border-radius:8px;">
+          <strong>Coordinador:</strong> Perfecto, avísame si necesitas apoyo en algo.
+          <small style="color:#666;display:block;">09:36 AM</small>
+        </div>
+      `;
+    }
+    return;
+  }
+  
+  const chatDiv = document.getElementById('chatPsico');
+  if (!chatDiv) return;
+  
+  const chatRef = db.collection('chats_psicologo_coordinador')
+    .doc(auth.currentUser.uid + '_coordinador')
+    .collection('mensajes')
+    .orderBy('timestamp', 'asc');
+  
+  chatRef.onSnapshot((snapshot) => {
+    let html = '';
+    snapshot.forEach((doc) => {
+      const msg = doc.data();
+      const isPsicologo = msg.senderType === 'psicologo';
+      const bgColor = isPsicologo ? '#e3f2fd' : '#f1f8e9';
+      const tiempo = msg.timestamp ? msg.timestamp.toDate().toLocaleTimeString() : 'Ahora';
+      
+      html += `
+        <div style="margin-bottom:10px;padding:8px;background:${bgColor};border-radius:8px;">
+          <strong>${isPsicologo ? 'Tú' : 'Coordinador'}:</strong> ${msg.text}
+          <small style="color:#666;display:block;">${tiempo}</small>
+        </div>
+      `;
+    });
+    
+    if (!html) {
+      html = '<p style="color:#666;text-align:center;">No hay mensajes. ¡Escribe algo al coordinador!</p>';
+    }
+    
+    chatDiv.innerHTML = html;
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  }, (error) => {
+    console.error('Error cargando chat psicólogo:', error);
+    chatDiv.innerHTML = '<p style="color:#dc2626;text-align:center;">Error cargando el chat</p>';
+  });
 }
 
 // --- Chat coordinador con filtros múltiples ---
@@ -1204,20 +1307,34 @@ async function cargarPsicologos() {
       return;
     }
 
+    // Si es modo demo (sin Firebase real), mostrar datos demo
+    if (isAdminAuthenticated && !firebase.auth().currentUser) {
+      todosPsicologos = [
+        { id: 'demo_psi1', nombre: 'Dr. Ana García', turnos: ['Mañana'] },
+        { id: 'demo_psi2', nombre: 'Dr. Carlos López', turnos: ['Tarde'] },
+        { id: 'demo_psi3', nombre: 'Dra. María Santos', turnos: ['Noche'] },
+        { id: 'demo_psi4', nombre: 'Dr. Pedro Ruiz', turnos: ['Mañana'] }
+      ];
+      actualizarSelectorPsicologos();
+      return;
+    }
+
     const disponibilidadSnap = await db.collection('disponibilidad').get();
     const psicologosMap = new Map();
     
     disponibilidadSnap.forEach(doc => {
       const data = doc.data();
-      const key = data.nombre + '_' + data.telefono;
-      if (!psicologosMap.has(key)) {
-        psicologosMap.set(key, {
+      const userId = data.userId || data.nombre + '_' + data.telefono; // Fallback para compatibilidad
+      
+      if (!psicologosMap.has(userId)) {
+        psicologosMap.set(userId, {
+          id: userId,
           nombre: data.nombre,
           telefono: data.telefono,
           turnos: new Set()
         });
       }
-      psicologosMap.get(key).turnos.add(data.turno);
+      psicologosMap.get(userId).turnos.add(data.turno);
     });
     
     todosPsicologos = Array.from(psicologosMap.values()).map(p => ({
@@ -1252,7 +1369,7 @@ function actualizarSelectorPsicologos(turnosFiltrados = []) {
   
   psicologosFiltrados.forEach(p => {
     const option = document.createElement('option');
-    option.value = p.telefono;
+    option.value = p.id; // Usar ID en lugar de teléfono
     option.textContent = `${p.nombre} (${p.turnos.join(', ')})`;
     selectPsico.appendChild(option);
   });
@@ -1271,20 +1388,128 @@ if (btnFiltrarPsico) {
 if (btnSendCoord && msgCoord && selectPsico) {
   selectPsico.onchange = () => {
     currentPsicoId = selectPsico.value;
+    if (currentPsicoId) {
+      cargarChatCoordinadorPsicologo(currentPsicoId);
+    } else {
+      const chatDiv = document.getElementById('chatCoord');
+      if (chatDiv) {
+        chatDiv.innerHTML = '<p style="color:#666;text-align:center;">Selecciona un psicólogo para iniciar el chat</p>';
+      }
+    }
   };
-  btnSendCoord.onclick = () => {
+  
+  btnSendCoord.onclick = async () => {
     const text = msgCoord.value.trim();
     if (!text || !currentPsicoId) return;
-    db.collection('conversaciones').doc(currentPsicoId + '_coordinador').collection('mensajes').add({
-      text,
-      userType: 'coordinador',
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    msgCoord.value = '';
+    
+    // Si es modo demo
+    if (currentPsicoId.startsWith('demo_') || (!firebase.auth().currentUser && isAdminAuthenticated)) {
+      const chatDiv = document.getElementById('chatCoord');
+      if (chatDiv) {
+        const nuevoMensaje = `
+          <div style="margin-bottom:10px;padding:8px;background:#f1f8e9;border-radius:8px;">
+            <strong>Tú:</strong> ${text}
+            <small style="color:#666;display:block;">${new Date().toLocaleTimeString()}</small>
+          </div>
+        `;
+        chatDiv.innerHTML += nuevoMensaje;
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+      }
+      msgCoord.value = '';
+      return;
+    }
+    
+    // Modo real con Firebase
+    if (!auth.currentUser) return;
+    
+    try {
+      await db.collection('chats_psicologo_coordinador')
+        .doc(currentPsicoId + '_coordinador')
+        .collection('mensajes')
+        .add({
+          text,
+          senderId: auth.currentUser.uid,
+          senderType: 'coordinador',
+          senderName: auth.currentUser.displayName || 'Coordinador',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      
+      msgCoord.value = '';
+    } catch (error) {
+      console.error('Error enviando mensaje coordinador:', error);
+    }
+  };
+  
+  // Enviar con Enter
+  msgCoord.onkeypress = (e) => {
+    if (e.key === 'Enter') {
+      btnSendCoord.click();
+    }
   };
   
   // Cargar psicólogos al inicio
   cargarPsicologos();
+}
+
+// Función para cargar chat coordinador con psicólogo específico
+function cargarChatCoordinadorPsicologo(psicologoId) {
+  if (!psicologoId) return;
+  
+  const chatDiv = document.getElementById('chatCoord');
+  if (!chatDiv) return;
+  
+  // Si es modo demo
+  if (psicologoId.startsWith('demo_') || (!firebase.auth().currentUser && isAdminAuthenticated)) {
+    const nombrePsicologo = todosPsicologos.find(p => p.id === psicologoId)?.nombre || 'Psicólogo';
+    chatDiv.innerHTML = `
+      <div style="margin-bottom:10px;padding:8px;background:#f1f8e9;border-radius:8px;">
+        <strong>Tú:</strong> Hola ${nombrePsicologo}, ¿cómo está todo por tu zona?
+        <small style="color:#666;display:block;">10:15 AM</small>
+      </div>
+      <div style="margin-bottom:10px;padding:8px;background:#e3f2fd;border-radius:8px;">
+        <strong>${nombrePsicologo}:</strong> Hola! Todo tranquilo por aquí, solo 2 consultas programadas para esta tarde.
+        <small style="color:#666;display:block;">10:18 AM</small>
+      </div>
+      <div style="margin-bottom:10px;padding:8px;background:#f1f8e9;border-radius:8px;">
+        <strong>Tú:</strong> Perfecto, mantén informado si surge alguna emergencia.
+        <small style="color:#666;display:block;">10:20 AM</small>
+      </div>
+    `;
+    return;
+  }
+  
+  // Modo real con Firebase
+  const chatRef = db.collection('chats_psicologo_coordinador')
+    .doc(psicologoId + '_coordinador')
+    .collection('mensajes')
+    .orderBy('timestamp', 'asc');
+  
+  chatRef.onSnapshot((snapshot) => {
+    let html = '';
+    snapshot.forEach((doc) => {
+      const msg = doc.data();
+      const isCoordinador = msg.senderType === 'coordinador';
+      const bgColor = isCoordinador ? '#f1f8e9' : '#e3f2fd';
+      const tiempo = msg.timestamp ? msg.timestamp.toDate().toLocaleTimeString() : 'Ahora';
+      
+      html += `
+        <div style="margin-bottom:10px;padding:8px;background:${bgColor};border-radius:8px;">
+          <strong>${isCoordinador ? 'Tú' : 'Psicólogo'}:</strong> ${msg.text}
+          <small style="color:#666;display:block;">${tiempo}</small>
+        </div>
+      `;
+    });
+    
+    if (!html) {
+      html = '<p style="color:#666;text-align:center;">No hay mensajes. ¡Inicia la conversación!</p>';
+    }
+    
+    chatDiv.innerHTML = html;
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  }, (error) => {
+    console.error('Error cargando chat coordinador:', error);
+    chatDiv.innerHTML = '<p style="color:#dc2626;text-align:center;">Error cargando el chat</p>';
+  });
 }
 // --- Autocompletado de zonas ---
 const zonasDisponibles = [

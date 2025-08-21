@@ -154,10 +154,12 @@
     </div>
     
     <div class="card" style="max-width:400px;margin:20px auto;">
-      <h3>Chat con Coordinador</h3>
+      <h3>💬 Chat con Coordinador</h3>
       <div id="chatPsico" class="chat"></div>
-      <input id="msgPsico1" type="text" placeholder="Escribe tu mensaje..." style="width:80%" />
-      <button id="btnSendPsico" class="small">Enviar</button>
+      <div class="chat-input-container">
+        <input id="msgPsico1" type="text" placeholder="Escribe tu mensaje..." />
+        <button id="btnSendPsico" class="btn-primary">Enviar</button>
+      </div>
     </div>
   </div>
 
@@ -228,7 +230,7 @@
       <div id="listadoContainer" style="max-height:460px;overflow:auto"></div>
     </div>
     <div class="card" style="max-width:600px;margin:20px auto;">
-      <h3>Chat con Psicólogos</h3>
+      <h3>💬 Chat con Psicólogos</h3>
       <label for="filtroTurnoPsico">Filtrar psicólogos por turno:</label>
       <div id="filtroTurnoPsico" style="margin-bottom:10px;">
         <label><input type="checkbox" value="Mañana"> Mañana</label>
@@ -239,8 +241,10 @@
       <label for="selectPsico">Selecciona psicólogo:</label>
       <select id="selectPsico" style="width:100%;margin-bottom:10px"></select>
       <div id="chatCoord" class="chat"></div>
-      <input id="msgCoord1" type="text" placeholder="Escribe tu mensaje..." style="width:80%" />
-      <button id="btnSendCoord" class="small">Enviar</button>
+      <div class="chat-input-container">
+        <input id="msgCoord1" type="text" placeholder="Escribe tu mensaje..." />
+        <button id="btnSendCoord" class="btn-primary">Enviar</button>
+      </div>
     </div>
   </div>
 
