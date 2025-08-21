@@ -93,6 +93,45 @@ if (btnBorrarTodo) {
         });
       });
     }
+<<<<<<< HEAD
+  };
+}
+
+// --- Botones de chat (plantilla básica) ---
+const btnSendPsico = document.getElementById('btnSendPsico');
+const msgPsico = document.getElementById('msgPsico');
+if (btnSendPsico && msgPsico) {
+  btnSendPsico.onclick = () => {
+    const text = msgPsico.value.trim();
+    if (!text || !auth.currentUser) return;
+    db.collection('conversaciones').doc(auth.currentUser.uid + '_coordinador').collection('mensajes').add({
+      text,
+      userType: 'psicologo',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    msgPsico.value = '';
+  };
+}
+
+const btnSendCoord = document.getElementById('btnSendCoord');
+const msgCoord = document.getElementById('msgCoord');
+const selectPsico = document.getElementById('selectPsico');
+let currentPsicoId = '';
+if (btnSendCoord && msgCoord && selectPsico) {
+  selectPsico.onchange = () => {
+    currentPsicoId = selectPsico.value;
+  };
+  btnSendCoord.onclick = () => {
+    const text = msgCoord.value.trim();
+    if (!text || !currentPsicoId) return;
+    db.collection('conversaciones').doc(currentPsicoId + '_coordinador').collection('mensajes').add({
+      text,
+      userType: 'coordinador',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    msgCoord.value = '';
+=======
+>>>>>>> 68011a6 (Resuelto conflicto y limpiado app.js)
   };
 }
 
@@ -131,6 +170,7 @@ if (btnSendCoord && msgCoord && selectPsico) {
     msgCoord.value = '';
   };
 }
+
 // --- Autocompletado de zonas ---
 const zonasDisponibles = [
   "Ávila Zona Sur - Arenas de San Pedro",
@@ -155,14 +195,12 @@ const zonasDisponibles = [
   "Valladolid Zona Sur - Medina/Olmedo",
   "Valladolid Zona Este - Peñafiel",
   "Zamora Zona Nordeste - Benavente",
-  "Zamora Zona Noroeste - Puebla de Sanabria",
-  "Zamora Zona Sur - Zamora"
 ];
 const zonaInput = document.getElementById('zona');
-const zonaSugerencias = document.getElementById('zona-sugerencias');
-if(zonaInput && zonaSugerencias){
+const zonaSugerencias = document.getElementById('zonaSugerencias');
+if (zonaInput) {
   zonaInput.addEventListener('input', function() {
-    const valor = zonaInput.value.toLowerCase();
+    const valor = this.value.toLowerCase();
     zonaSugerencias.innerHTML = '';
     if (!valor) {
       zonaSugerencias.style.display = 'none';
@@ -197,7 +235,6 @@ const turnoSelect = document.getElementById('turno');
 if(semanaInput && turnoSelect){
   semanaInput.addEventListener('change', function() {
     turnoSelect.innerHTML = '';
-    const base = ["Mañana", "Tarde", "Noche"];
     base.forEach(turno => {
       const opt = document.createElement('option');
       opt.value = turno;
