@@ -11,6 +11,9 @@ if (typeof firebaseConfig !== 'undefined' && !firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Variables globales
+let isAdminAuthenticated = false; // Para track del admin
+
 // --- Inicialización y funciones de UI ---
 document.addEventListener('DOMContentLoaded', function() {
   // Funcionalidad de pestañas
@@ -46,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   
   if (btnAdminAccess) {
-    btnAdminAccess.onclick = () => {
+    btnAdminAccess.onclick = async () => {
       const adminEmail = document.getElementById('adminEmailAccess').value.trim();
       const adminPassword = document.getElementById('adminPasswordAccess').value;
       
@@ -59,6 +62,18 @@ document.addEventListener('DOMContentLoaded', function() {
       if (adminEmail === ADMIN_CREDENTIALS.email && adminPassword === ADMIN_CREDENTIALS.password) {
         console.log('Acceso de administrador autorizado');
         showSuccess('Acceso autorizado. Accediendo al panel...');
+        
+        // Marcar que el admin está autenticado
+        isAdminAuthenticated = true;
+        
+        // Intentar autenticar con Firebase si es posible
+        try {
+          await firebase.auth().signInWithEmailAndPassword(adminEmail, adminPassword);
+          console.log('Admin autenticado con Firebase');
+        } catch (authError) {
+          console.log('Admin usando autenticación local:', authError.message);
+        }
+        
         setTimeout(() => {
           mostrarVista('panelAdmin');
         }, 1000);
@@ -138,8 +153,11 @@ function mostrarVista(vista) {
   if (vista === 'login') document.getElementById('login').classList.remove('hidden');
   if (vista === 'panelAdmin') {
     document.getElementById('panelAdmin').classList.remove('hidden');
-    cargarEstadisticas();
-    cargarListaCoordinadores();
+    // Solo cargar estadísticas si hay un usuario autenticado
+    setTimeout(() => {
+      cargarEstadisticas();
+      cargarListaCoordinadores();
+    }, 100);
   }
 }
 
@@ -224,6 +242,7 @@ document.getElementById('btnRegister').onclick = async () => {
 // --- Salir ---
 function logout() {
   auth.signOut();
+  isAdminAuthenticated = false; // Limpiar la autenticación del admin
   mostrarVista('login');
 }
 const btnSalirPsicologo = document.getElementById('btnSalirPsicologo');
@@ -330,7 +349,7 @@ auth.onAuthStateChanged(async user => {
     mostrarVista(rol);
   } else {
     mostrarVista('login');
-    document.getElementById('acceso').style.display = '';
+    // No necesitamos mostrar elemento 'acceso' porque usamos las vistas
   }
 });
 
@@ -378,6 +397,12 @@ let todosPsicologos = [];
 // Cargar estadísticas para panel admin
 async function cargarEstadisticas() {
   try {
+    // Verificar si el usuario está autenticado o es admin
+    if (!firebase.auth().currentUser && !isAdminAuthenticated) {
+      console.log('Usuario no autenticado, saltando estadísticas');
+      return;
+    }
+
     const usuariosSnap = await db.collection('usuarios').get();
     let psicologos = 0, coordinadores = 0;
     
@@ -405,12 +430,26 @@ async function cargarEstadisticas() {
     if (statSemana) statSemana.textContent = registrosSnap.size;
   } catch (e) {
     console.error('Error cargando estadísticas:', e);
+    // Mostrar valores por defecto en caso de error
+    const statPsicologos = document.getElementById('statPsicologos');
+    const statCoordinadores = document.getElementById('statCoordinadores');
+    const statSemana = document.getElementById('statSemana');
+    
+    if (statPsicologos) statPsicologos.textContent = '--';
+    if (statCoordinadores) statCoordinadores.textContent = '--';
+    if (statSemana) statSemana.textContent = '--';
   }
 }
 
 // Cargar lista de coordinadores
 async function cargarListaCoordinadores() {
   try {
+    // Verificar si el usuario está autenticado o es admin
+    if (!firebase.auth().currentUser && !isAdminAuthenticated) {
+      console.log('Usuario no autenticado, saltando lista de coordinadores');
+      return;
+    }
+
     const listaDiv = document.getElementById('listaCoordinadores');
     if (!listaDiv) return;
     
@@ -463,6 +502,12 @@ if (btnRefrescarCoordinadores) {
 // Cargar psicólogos para el selector
 async function cargarPsicologos() {
   try {
+    // Verificar si el usuario está autenticado o es admin
+    if (!firebase.auth().currentUser && !isAdminAuthenticated) {
+      console.log('Usuario no autenticado, saltando carga de psicólogos');
+      return;
+    }
+
     const disponibilidadSnap = await db.collection('disponibilidad').get();
     const psicologosMap = new Map();
     
@@ -487,6 +532,11 @@ async function cargarPsicologos() {
     actualizarSelectorPsicologos();
   } catch (e) {
     console.error('Error cargando psicólogos:', e);
+    // Mostrar selector vacío en caso de error
+    const selectPsico = document.getElementById('selectPsico');
+    if (selectPsico) {
+      selectPsico.innerHTML = '<option value="">Error cargando psicólogos</option>';
+    }
   }
 }
 
