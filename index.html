@@ -125,6 +125,45 @@
         <button type="submit">Guardar</button>
       </form>
     </div>
+    
+    <!-- Sistema de Informes para Psicólogos -->
+    <div class="card" style="max-width:500px;margin:20px auto;">
+      <h3>📋 Subir Informe de Salida</h3>
+      <form id="formInforme">
+        <div class="form-group">
+          <label for="tipoSalida">Tipo de Salida</label>
+          <select id="tipoSalida" required>
+            <option value="">-- Selecciona tipo --</option>
+            <option value="emergencia">Emergencia</option>
+            <option value="consulta_programada">Consulta Programada</option>
+            <option value="seguimiento">Seguimiento</option>
+            <option value="intervencion_crisis">Intervención Crisis</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="ubicacionSalida">Ubicación</label>
+          <input id="ubicacionSalida" type="text" placeholder="Dirección o lugar de la salida" required />
+        </div>
+        <div class="form-group">
+          <label for="fechaSalida">Fecha y Hora</label>
+          <input id="fechaSalida" type="datetime-local" required />
+        </div>
+        <div class="form-group">
+          <label for="duracionSalida">Duración (minutos)</label>
+          <input id="duracionSalida" type="number" placeholder="Ej: 60" min="1" required />
+        </div>
+        <div class="form-group">
+          <label for="pacientesAtendidos">Pacientes Atendidos</label>
+          <input id="pacientesAtendidos" type="number" placeholder="Número de pacientes" min="1" required />
+        </div>
+        <div class="form-group">
+          <label for="observacionesInforme">Observaciones</label>
+          <textarea id="observacionesInforme" rows="3" placeholder="Detalles importantes de la salida..."></textarea>
+        </div>
+        <button type="submit" class="btn-primary">Subir Informe</button>
+      </form>
+    </div>
+    
     <div class="card" style="max-width:400px;margin:20px auto;">
       <h3>Chat con Coordinador</h3>
       <div id="chatPsico" class="chat"></div>
@@ -136,9 +175,36 @@
   <!-- Vista Coordinador -->
   <div id="vistaCoordinador" class="hidden">
     <header>
-      <h1>Coordinador — Vista</h1>
+      <h1>Panel Coordinador</h1>
       <button id="btnSalirCoordinador" style="float:right;background:#718096;">Salir</button>
     </header>
+    
+    <div class="coordinator-dashboard">
+      <div class="card">
+        <h3>📊 Resumen de Actividad</h3>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-number" id="statPsicologosActivos">--</span>
+            <span class="stat-label">Psicólogos Activos</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="statSalidasHoy">--</span>
+            <span class="stat-label">Salidas Hoy</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="statPacientesSemana">--</span>
+            <span class="stat-label">Pacientes esta Semana</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>🚨 Psicólogos Disponibles</h3>
+        <div id="listaPsicologosDisponibles">
+          <p>Cargando psicólogos disponibles...</p>
+        </div>
+      </div>
+    </div>
     <div class="card" style="max-width:600px;margin:0 auto;">
       <label for="filtroDia">Filtrar por día</label>
       <input id="filtroDia" type="date" />
@@ -177,21 +243,117 @@
     </div>
   </div>
 
-  <!-- Panel Admin para Coordinadores -->
+  <!-- Panel Admin SOLO para Administradores -->
   <div id="panelAdmin" class="hidden">
     <header>
-      <h1>Panel Administrativo - Coordinadores</h1>
+      <h1>🔐 Panel Administrativo</h1>
       <button id="btnSalirAdmin" style="float:right;background:#718096;">Salir</button>
     </header>
-    <div class="card" style="max-width:800px;margin:0 auto;">
-      <h2>Gestión de Coordinadores</h2>
-      <div style="display:flex;gap:20px;margin-bottom:20px;">
-        <div style="flex:1;">
-          <h3>Registrar Nuevo Coordinador</h3>
-          <input id="adminEmail" type="email" placeholder="Email del coordinador" style="width:100%;margin-bottom:10px;" />
-          <input id="adminPassword" type="password" placeholder="Contraseña (min. 6 caracteres)" style="width:100%;margin-bottom:10px;" />
-          <button id="btnCrearCoordinador" style="background:#38a169;">Crear Coordinador</button>
-          <div id="adminError" style="margin-top:10px;"></div>
+    
+    <!-- Dashboard de Estadísticas Avanzadas -->
+    <div class="admin-dashboard">
+      <div class="stats-container">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-content">
+            <span class="stat-number" id="statPsicologos">--</span>
+            <span class="stat-label">Psicólogos Registrados</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👨‍💼</div>
+          <div class="stat-content">
+            <span class="stat-number" id="statCoordinadores">--</span>
+            <span class="stat-label">Coordinadores</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🚨</div>
+          <div class="stat-content">
+            <span class="stat-number" id="statSalidasMes">--</span>
+            <span class="stat-label">Salidas este Mes</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-content">
+            <span class="stat-number" id="statSemana">--</span>
+            <span class="stat-label">Registros Semana</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏥</div>
+          <div class="stat-content">
+            <span class="stat-number" id="statPacientesTotales">--</span>
+            <span class="stat-label">Pacientes Atendidos</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-content">
+            <span class="stat-number" id="statTiempoPromedio">--</span>
+            <span class="stat-label">Tiempo Promedio (min)</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Estadísticas por Psicólogo -->
+      <div class="card">
+        <h3>📊 Rendimiento por Psicólogo</h3>
+        <div class="table-container">
+          <table id="tablaPsicologos">
+            <thead>
+              <tr>
+                <th>Psicólogo</th>
+                <th>Salidas</th>
+                <th>Pacientes</th>
+                <th>Zonas Cubiertas</th>
+                <th>Tiempo Total (hrs)</th>
+                <th>Última Actividad</th>
+              </tr>
+            </thead>
+            <tbody id="tablaPsicologosBody">
+              <tr><td colspan="6">Cargando datos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Gestión de Coordinadores -->
+      <div class="card">
+        <h3>👨‍💼 Gestión de Coordinadores</h3>
+        <div style="display:flex;gap:20px;">
+          <div style="flex:1;">
+            <h4>Registrar Nuevo Coordinador</h4>
+            <div class="form-group">
+              <input id="adminEmail" type="email" placeholder="Email del coordinador" />
+            </div>
+            <div class="form-group">
+              <input id="adminPassword" type="password" placeholder="Contraseña (min. 6 caracteres)" />
+            </div>
+            <button id="btnCrearCoordinador" class="btn-primary">Crear Coordinador</button>
+            <div id="adminError" style="margin-top:10px;"></div>
+          </div>
+          <div style="flex:1;">
+            <h4>Lista de Coordinadores 
+              <button id="btnRefrescarCoordinadores" class="btn-secondary" style="font-size:0.8em;padding:4px 8px;">🔄 Refrescar</button>
+            </h4>
+            <div id="listaCoordinadores" style="max-height:200px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;">
+              <p style="text-align:center;padding:20px;">Cargando coordinadores...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Análisis de Zonas -->
+      <div class="card">
+        <h3>🗺️ Análisis por Zonas</h3>
+        <div id="estadisticasZonas" style="max-height:300px;overflow-y:auto;">
+          <p>Cargando estadísticas de zonas...</p>
+        </div>
+      </div>
+    </div>
+  </div>
         </div>
         <div style="flex:1;">
           <h3>Login Coordinador</h3>

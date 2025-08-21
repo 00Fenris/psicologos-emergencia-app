@@ -149,7 +149,14 @@ function mostrarVista(vista) {
   document.getElementById('vistaCoordinador').classList.add('hidden');
   document.getElementById('panelAdmin').classList.add('hidden');
   if (vista === 'psicologo') document.getElementById('vistaPsicologo').classList.remove('hidden');
-  if (vista === 'coordinador') document.getElementById('vistaCoordinador').classList.remove('hidden');
+  if (vista === 'coordinador') {
+    document.getElementById('vistaCoordinador').classList.remove('hidden');
+    // Cargar datos del coordinador
+    setTimeout(() => {
+      cargarEstadisticasCoordinador();
+      cargarPsicologosDisponibles();
+    }, 100);
+  }
   if (vista === 'login') document.getElementById('login').classList.remove('hidden');
   if (vista === 'panelAdmin') {
     document.getElementById('panelAdmin').classList.remove('hidden');
@@ -394,7 +401,7 @@ const selectPsico = document.getElementById('selectPsico');
 let currentPsicoId = '';
 let todosPsicologos = [];
 
-// Cargar estadísticas para panel admin
+// Cargar estadísticas avanzadas para panel admin
 async function cargarEstadisticas() {
   try {
     // Verificar si el usuario está autenticado o es admin
@@ -403,6 +410,7 @@ async function cargarEstadisticas() {
       return;
     }
 
+    // Estadísticas básicas de usuarios
     const usuariosSnap = await db.collection('usuarios').get();
     let psicologos = 0, coordinadores = 0;
     
@@ -411,6 +419,26 @@ async function cargarEstadisticas() {
       if (data.rol === 'psicologo') psicologos++;
       if (data.rol === 'coordinador') coordinadores++;
     });
+    
+    // Estadísticas de informes
+    const informesSnap = await db.collection('informes').get();
+    let salidasMes = 0, pacientesTotales = 0, tiempoTotal = 0;
+    
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    inicioMes.setHours(0, 0, 0, 0);
+    
+    const informesMesSnap = await db.collection('informes')
+      .where('fechaCreacion', '>=', inicioMes)
+      .get();
+    
+    informesSnap.forEach(doc => {
+      const data = doc.data();
+      pacientesTotales += data.pacientesAtendidos || 0;
+      tiempoTotal += data.duracion || 0;
+    });
+    
+    salidasMes = informesMesSnap.size;
     
     // Registros de esta semana
     const inicioSemana = new Date();
@@ -421,25 +449,290 @@ async function cargarEstadisticas() {
       .where('timestamp', '>=', inicioSemana)
       .get();
     
+    // Actualizar elementos
     const statPsicologos = document.getElementById('statPsicologos');
     const statCoordinadores = document.getElementById('statCoordinadores');
+    const statSalidasMes = document.getElementById('statSalidasMes');
     const statSemana = document.getElementById('statSemana');
+    const statPacientesTotales = document.getElementById('statPacientesTotales');
+    const statTiempoPromedio = document.getElementById('statTiempoPromedio');
     
     if (statPsicologos) statPsicologos.textContent = psicologos;
     if (statCoordinadores) statCoordinadores.textContent = coordinadores;
+    if (statSalidasMes) statSalidasMes.textContent = salidasMes;
     if (statSemana) statSemana.textContent = registrosSnap.size;
+    if (statPacientesTotales) statPacientesTotales.textContent = pacientesTotales;
+    if (statTiempoPromedio) {
+      const promedio = salidasMes > 0 ? Math.round(tiempoTotal / salidasMes) : 0;
+      statTiempoPromedio.textContent = promedio;
+    }
+    
+    // Cargar estadísticas por psicólogo
+    await cargarEstadisticasPsicologos();
+    
+    // Cargar estadísticas por zonas
+    await cargarEstadisticasZonas();
+    
   } catch (e) {
     console.error('Error cargando estadísticas:', e);
     // Mostrar valores por defecto en caso de error
-    const statPsicologos = document.getElementById('statPsicologos');
-    const statCoordinadores = document.getElementById('statCoordinadores');
-    const statSemana = document.getElementById('statSemana');
-    
-    if (statPsicologos) statPsicologos.textContent = '--';
-    if (statCoordinadores) statCoordinadores.textContent = '--';
-    if (statSemana) statSemana.textContent = '--';
+    const elementos = ['statPsicologos', 'statCoordinadores', 'statSalidasMes', 'statSemana', 'statPacientesTotales', 'statTiempoPromedio'];
+    elementos.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = '--';
+    });
   }
 }
+
+// Cargar estadísticas detalladas por psicólogo
+async function cargarEstadisticasPsicologos() {
+  try {
+    const informesSnap = await db.collection('informes').get();
+    const psicologosStats = new Map();
+    
+    // Procesar informes
+    informesSnap.forEach(doc => {
+      const data = doc.data();
+      const email = data.psicologoEmail || 'No especificado';
+      const nombre = data.psicologoNombre || 'No especificado';
+      
+      if (!psicologosStats.has(email)) {
+        psicologosStats.set(email, {
+          nombre: nombre,
+          email: email,
+          salidas: 0,
+          pacientes: 0,
+          zonas: new Set(),
+          tiempoTotal: 0,
+          ultimaActividad: null
+        });
+      }
+      
+      const stats = psicologosStats.get(email);
+      stats.salidas++;
+      stats.pacientes += data.pacientesAtendidos || 0;
+      stats.zonas.add(data.ubicacion || 'No especificada');
+      stats.tiempoTotal += data.duracion || 0;
+      
+      const fechaSalida = data.fechaSalida?.toDate();
+      if (fechaSalida && (!stats.ultimaActividad || fechaSalida > stats.ultimaActividad)) {
+        stats.ultimaActividad = fechaSalida;
+      }
+    });
+    
+    // Actualizar tabla
+    const tbody = document.getElementById('tablaPsicologosBody');
+    if (!tbody) return;
+    
+    if (psicologosStats.size === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#666;">No hay datos disponibles</td></tr>';
+      return;
+    }
+    
+    let html = '';
+    psicologosStats.forEach(stats => {
+      const ultimaActividad = stats.ultimaActividad ? 
+        stats.ultimaActividad.toLocaleDateString() : 'Nunca';
+      const tiempoHoras = Math.round(stats.tiempoTotal / 60 * 10) / 10;
+      
+      html += `
+        <tr>
+          <td><strong>${stats.nombre}</strong><br><small>${stats.email}</small></td>
+          <td>${stats.salidas}</td>
+          <td>${stats.pacientes}</td>
+          <td>${stats.zonas.size}</td>
+          <td>${tiempoHoras}h</td>
+          <td>${ultimaActividad}</td>
+        </tr>
+      `;
+    });
+    
+    tbody.innerHTML = html;
+  } catch (e) {
+    console.error('Error cargando estadísticas de psicólogos:', e);
+    const tbody = document.getElementById('tablaPsicologosBody');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626;">Error cargando datos</td></tr>';
+    }
+  }
+}
+
+// Cargar estadísticas por zonas
+async function cargarEstadisticasZonas() {
+  try {
+    const informesSnap = await db.collection('informes').get();
+    const zonasStats = new Map();
+    
+    informesSnap.forEach(doc => {
+      const data = doc.data();
+      const zona = data.ubicacion || 'No especificada';
+      
+      if (!zonasStats.has(zona)) {
+        zonasStats.set(zona, {
+          salidas: 0,
+          pacientes: 0,
+          tiempoTotal: 0,
+          psicologos: new Set()
+        });
+      }
+      
+      const stats = zonasStats.get(zona);
+      stats.salidas++;
+      stats.pacientes += data.pacientesAtendidos || 0;
+      stats.tiempoTotal += data.duracion || 0;
+      stats.psicologos.add(data.psicologoEmail || 'No especificado');
+    });
+    
+    const container = document.getElementById('estadisticasZonas');
+    if (!container) return;
+    
+    if (zonasStats.size === 0) {
+      container.innerHTML = '<p style="text-align:center;color:#666;">No hay datos de zonas disponibles</p>';
+      return;
+    }
+    
+    // Convertir a array y ordenar por número de salidas
+    const zonasArray = Array.from(zonasStats.entries())
+      .sort((a, b) => b[1].salidas - a[1].salidas);
+    
+    let html = '';
+    zonasArray.forEach(([zona, stats]) => {
+      const tiempoHoras = Math.round(stats.tiempoTotal / 60 * 10) / 10;
+      html += `
+        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:15px;margin-bottom:10px;background:white;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h4 style="margin:0;color:#2d3748;">${zona}</h4>
+            <span style="background:#4299e1;color:white;padding:4px 8px;border-radius:4px;font-size:0.8em;">
+              ${stats.salidas} salidas
+            </span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;font-size:0.9em;">
+            <div><strong>Pacientes:</strong> ${stats.pacientes}</div>
+            <div><strong>Tiempo total:</strong> ${tiempoHoras}h</div>
+            <div><strong>Psicólogos:</strong> ${stats.psicologos.size}</div>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  } catch (e) {
+    console.error('Error cargando estadísticas de zonas:', e);
+    const container = document.getElementById('estadisticasZonas');
+    if (container) {
+      container.innerHTML = '<p style="color:#dc2626;text-align:center;">Error cargando estadísticas de zonas</p>';
+    }
+  }
+}
+
+// === FUNCIONES DEL COORDINADOR ===
+
+// Cargar estadísticas para el panel coordinador
+async function cargarEstadisticasCoordinador() {
+  try {
+    if (!firebase.auth().currentUser) {
+      console.log('Usuario no autenticado para coordinador');
+      return;
+    }
+
+    // Estadísticas básicas
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    const inicioSemana = new Date();
+    inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+    inicioSemana.setHours(0, 0, 0, 0);
+    
+    // Contar psicólogos activos (con registros recientes)
+    const usuariosSnap = await db.collection('usuarios')
+      .where('rol', '==', 'psicologo')
+      .get();
+    
+    // Salidas de hoy
+    const salidasHoySnap = await db.collection('informes')
+      .where('fechaCreacion', '>=', hoy)
+      .get();
+    
+    // Pacientes de esta semana
+    const pacientesSemanaSnap = await db.collection('informes')
+      .where('fechaCreacion', '>=', inicioSemana)
+      .get();
+    
+    let pacientesSemana = 0;
+    pacientesSemanaSnap.forEach(doc => {
+      pacientesSemana += doc.data().pacientesAtendidos || 0;
+    });
+    
+    // Actualizar elementos
+    const statPsicologosActivos = document.getElementById('statPsicologosActivos');
+    const statSalidasHoy = document.getElementById('statSalidasHoy');
+    const statPacientesSemana = document.getElementById('statPacientesSemana');
+    
+    if (statPsicologosActivos) statPsicologosActivos.textContent = usuariosSnap.size;
+    if (statSalidasHoy) statSalidasHoy.textContent = salidasHoySnap.size;
+    if (statPacientesSemana) statPacientesSemana.textContent = pacientesSemana;
+    
+  } catch (e) {
+    console.error('Error cargando estadísticas del coordinador:', e);
+    const elementos = ['statPsicologosActivos', 'statSalidasHoy', 'statPacientesSemana'];
+    elementos.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = '--';
+    });
+  }
+}
+
+// Cargar lista de psicólogos disponibles
+async function cargarPsicologosDisponibles() {
+  try {
+    if (!firebase.auth().currentUser) return;
+    
+    const disponibilidadSnap = await db.collection('disponibilidad')
+      .orderBy('timestamp', 'desc')
+      .limit(20)
+      .get();
+    
+    const container = document.getElementById('listaPsicologosDisponibles');
+    if (!container) return;
+    
+    if (disponibilidadSnap.empty) {
+      container.innerHTML = '<p style="text-align:center;color:#666;padding:20px;">No hay psicólogos registrados</p>';
+      return;
+    }
+    
+    let html = '';
+    disponibilidadSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.timestamp ? data.timestamp.toDate().toLocaleDateString() : 'Fecha no disponible';
+      
+      html += `
+        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px;background:white;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <strong>${data.nombre}</strong>
+              <br><small>📞 ${data.telefono}</small>
+              <br><small>📍 ${data.zona} | 🕐 ${data.turno}</small>
+            </div>
+            <div style="text-align:right;">
+              <span style="background:#38a169;color:white;padding:4px 8px;border-radius:4px;font-size:0.8em;">
+                Disponible
+              </span>
+              <br><small style="color:#666;">${fecha}</small>
+            </div>
+          </div>
+          ${data.notas ? `<div style="margin-top:8px;padding:8px;background:#f7fafc;border-radius:4px;font-size:0.9em;color:#2d3748;">📝 ${data.notas}</div>` : ''}
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  } catch (e) {
+    console.error('Error cargando psicólogos disponibles:', e);
+    const container = document.getElementById('listaPsicologosDisponibles');
+    if (container) {
+      container.innerHTML = '<p style="color:#dc2626;text-align:center;padding:20px;">Error cargando psicólogos</p>';
+    }
+  }
 
 // Cargar lista de coordinadores
 async function cargarListaCoordinadores() {
@@ -690,6 +983,46 @@ if(formPsico){
       mostrarListadoDisponibilidad();
     } catch (e) {
       alert('Error al guardar: ' + e.message);
+    }
+  });
+}
+
+// --- Sistema de Informes para Psicólogos ---
+const formInforme = document.getElementById('formInforme');
+if (formInforme) {
+  formInforme.addEventListener('submit', async e => {
+    e.preventDefault();
+    
+    if (!auth.currentUser) {
+      alert('Debes estar logueado para subir informes');
+      return;
+    }
+    
+    const informe = {
+      psicologoId: auth.currentUser.uid,
+      psicologoEmail: auth.currentUser.email,
+      psicologoNombre: document.getElementById('nombre1').value.trim() || 'No especificado',
+      tipoSalida: document.getElementById('tipoSalida').value,
+      ubicacion: document.getElementById('ubicacionSalida').value.trim(),
+      fechaSalida: new Date(document.getElementById('fechaSalida').value),
+      duracion: parseInt(document.getElementById('duracionSalida').value),
+      pacientesAtendidos: parseInt(document.getElementById('pacientesAtendidos').value),
+      observaciones: document.getElementById('observacionesInforme').value.trim(),
+      fechaCreacion: firebase.firestore.FieldValue.serverTimestamp(),
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    if (!informe.tipoSalida || !informe.ubicacion || !informe.fechaSalida || !informe.duracion || !informe.pacientesAtendidos) {
+      alert('Completa todos los campos obligatorios');
+      return;
+    }
+    
+    try {
+      await db.collection('informes').add(informe);
+      formInforme.reset();
+      showSuccess('Informe subido correctamente');
+    } catch (e) {
+      showError('Error al subir el informe: ' + e.message);
     }
   });
 }
