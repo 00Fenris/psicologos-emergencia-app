@@ -39,6 +39,13 @@ document.getElementById('btnLogin').onclick = async () => {
 };
 
 document.getElementById('btnRegister').onclick = async () => {
+  // Mostrar campos de registro si están ocultos
+  const registerFields = document.getElementById('registerFields');
+  if (registerFields.style.display === 'none') {
+    registerFields.style.display = 'block';
+    return;
+  }
+  
   const email = document.getElementById('emailRegister').value;
   const pass = document.getElementById('passwordRegister').value;
   const rol = document.getElementById('rol').value;
@@ -48,6 +55,7 @@ document.getElementById('btnRegister').onclick = async () => {
     await db.collection('usuarios').doc(user.uid).set({ rol });
     mostrarVista('login');
     document.getElementById('loginError').textContent = 'Registro exitoso. Ahora puedes iniciar sesión.';
+    registerFields.style.display = 'none';
   } catch (e) {
     document.getElementById('loginError').textContent = e.message;
   }
@@ -158,7 +166,7 @@ const zonasDisponibles = [
   "Zamora Zona Noroeste - Puebla de Sanabria",
   "Zamora Zona Sur - Zamora"
 ];
-const zonaInput = document.getElementById('zona');
+const zonaInput = document.getElementById('zona1');
 const zonaSugerencias = document.getElementById('zona-sugerencias');
 if(zonaInput && zonaSugerencias){
   zonaInput.addEventListener('input', function() {
@@ -192,8 +200,8 @@ if(zonaInput && zonaSugerencias){
 }
 
 // --- Selector de turno dependiente de la fecha ---
-const semanaInput = document.getElementById('semana');
-const turnoSelect = document.getElementById('turno');
+const semanaInput = document.getElementById('semana1');
+const turnoSelect = document.getElementById('turno1');
 if(semanaInput && turnoSelect){
   semanaInput.addEventListener('change', function() {
     turnoSelect.innerHTML = '';
