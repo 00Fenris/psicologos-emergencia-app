@@ -59,14 +59,23 @@
         </div>
         
         <!-- Panel Administración -->
-        <div id="panelAdmin" class="tab-content">
+        <div id="panelAdminTab" class="tab-content">
           <h2>Panel Administrativo</h2>
           <div class="admin-options">
             <div class="admin-card">
               <div class="admin-icon">⚙️</div>
-              <h3>Gestión del Sistema</h3>
-              <p>Accede al panel de control completo</p>
+              <h3>Acceso Administrador</h3>
+              <p>Solo para administradores del sistema</p>
+              <div class="form-group">
+                <input id="adminEmailAccess" type="email" placeholder="Email administrador" />
+              </div>
+              <div class="form-group">
+                <input id="adminPasswordAccess" type="password" placeholder="Contraseña administrador" />
+              </div>
               <button id="btnAdminAccess" class="btn-admin">Acceder al Panel</button>
+              <div style="font-size:0.8em;color:#666;margin-top:10px;">
+                <strong>Demo:</strong> test@mail.com / 123456
+              </div>
             </div>
             <div class="admin-card">
               <div class="admin-icon">👨‍💼</div>
@@ -180,9 +189,9 @@
         <div style="flex:1;">
           <h3>Registrar Nuevo Coordinador</h3>
           <input id="adminEmail" type="email" placeholder="Email del coordinador" style="width:100%;margin-bottom:10px;" />
-          <input id="adminPassword" type="password" placeholder="Contraseña" style="width:100%;margin-bottom:10px;" />
+          <input id="adminPassword" type="password" placeholder="Contraseña (min. 6 caracteres)" style="width:100%;margin-bottom:10px;" />
           <button id="btnCrearCoordinador" style="background:#38a169;">Crear Coordinador</button>
-          <div id="adminError" style="color:red;margin-top:10px;"></div>
+          <div id="adminError" style="margin-top:10px;"></div>
         </div>
         <div style="flex:1;">
           <h3>Login Coordinador</h3>
@@ -190,6 +199,14 @@
           <input id="coordPassword" type="password" placeholder="Contraseña" style="width:100%;margin-bottom:10px;" />
           <button id="btnLoginCoord" style="background:#4299e1;">Acceder como Coordinador</button>
         </div>
+      </div>
+      
+      <div style="margin-bottom:30px;">
+        <h3>Coordinadores Registrados</h3>
+        <div id="listaCoordinadores" style="max-height:200px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+          <p style="color:#666;text-align:center;">Cargando...</p>
+        </div>
+        <button id="btnRefrescarCoordinadores" style="margin-top:10px;background:#6b7280;">Refrescar Lista</button>
       </div>
       <div style="margin-top:30px;">
         <h3>Estadísticas</h3>

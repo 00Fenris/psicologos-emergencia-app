@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const tabPsicologo = document.getElementById('tabPsicologo');
   const tabAdmin = document.getElementById('tabAdmin');
   const panelPsicologo = document.getElementById('panelPsicologo');
-  const panelAdminTab = document.getElementById('panelAdmin');
+  const panelAdminTab = document.getElementById('panelAdminTab'); // Cambié aquí
 
   if (tabPsicologo && tabAdmin) {
     tabPsicologo.onclick = () => {
@@ -34,6 +34,42 @@ document.addEventListener('DOMContentLoaded', function() {
       panelPsicologo.classList.remove('active');
     };
   }
+
+  // Panel Admin - autenticación requerida
+  const btnAdminAccess = document.getElementById('btnAdminAccess');
+  const btnSalirAdmin = document.getElementById('btnSalirAdmin');
+  
+  // Credenciales de administrador (en producción deberían estar en una base de datos segura)
+  const ADMIN_CREDENTIALS = {
+    email: 'test@mail.com',
+    password: '123456'
+  };
+  
+  if (btnAdminAccess) {
+    btnAdminAccess.onclick = () => {
+      const adminEmail = document.getElementById('adminEmailAccess').value.trim();
+      const adminPassword = document.getElementById('adminPasswordAccess').value;
+      
+      // Validar credenciales de administrador
+      if (!adminEmail || !adminPassword) {
+        showError('Introduce email y contraseña de administrador.');
+        return;
+      }
+      
+      if (adminEmail === ADMIN_CREDENTIALS.email && adminPassword === ADMIN_CREDENTIALS.password) {
+        console.log('Acceso de administrador autorizado');
+        showSuccess('Acceso autorizado. Accediendo al panel...');
+        setTimeout(() => {
+          mostrarVista('panelAdmin');
+        }, 1000);
+      } else {
+        showError('Credenciales de administrador incorrectas.');
+      }
+    };
+  } else {
+    console.log('Botón btnAdminAccess no encontrado');
+  }
+  if (btnSalirAdmin) btnSalirAdmin.onclick = logout;
 
   // Login coordinador rápido
   const btnLoginCoordQuick = document.getElementById('btnLoginCoordQuick');
@@ -103,6 +139,7 @@ function mostrarVista(vista) {
   if (vista === 'panelAdmin') {
     document.getElementById('panelAdmin').classList.remove('hidden');
     cargarEstadisticas();
+    cargarListaCoordinadores();
   }
 }
 
@@ -194,43 +231,69 @@ const btnSalirCoordinador = document.getElementById('btnSalirCoordinador');
 if (btnSalirPsicologo) btnSalirPsicologo.onclick = logout;
 if (btnSalirCoordinador) btnSalirCoordinador.onclick = logout;
 
-// --- Panel Admin ---
-const btnAdminAccess = document.getElementById('btnAdminAccess');
-const btnSalirAdmin = document.getElementById('btnSalirAdmin');
-if (btnAdminAccess) btnAdminAccess.onclick = () => mostrarVista('panelAdmin');
-if (btnSalirAdmin) btnSalirAdmin.onclick = logout;
-
 // Crear coordinador desde panel admin
 const btnCrearCoordinador = document.getElementById('btnCrearCoordinador');
 if (btnCrearCoordinador) {
   btnCrearCoordinador.onclick = async () => {
     const email = document.getElementById('adminEmail').value.trim();
     const pass = document.getElementById('adminPassword').value;
+    const errorDiv = document.getElementById('adminError');
     
     if (!email || !pass) {
-      document.getElementById('adminError').textContent = 'Completa todos los campos.';
+      errorDiv.textContent = 'Completa todos los campos.';
+      errorDiv.style.color = 'red';
+      return;
+    }
+    
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errorDiv.textContent = 'Formato de email inválido.';
+      errorDiv.style.color = 'red';
+      return;
+    }
+    
+    // Validar contraseña
+    if (pass.length < 6) {
+      errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+      errorDiv.style.color = 'red';
       return;
     }
     
     try {
+      // Crear usuario temporalmente
       const userCred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = userCred.user;
+      
+      // Guardar información del coordinador
       await db.collection('usuarios').doc(user.uid).set({ 
         rol: 'coordinador',
         email: email,
         creadoPor: 'admin',
         fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
       });
-      document.getElementById('adminError').textContent = 'Coordinador creado exitosamente.';
-      document.getElementById('adminError').style.color = 'green';
+      
+      // Cerrar sesión del coordinador recién creado
+      await auth.signOut();
+      
+      // Mostrar mensaje de éxito
+      errorDiv.textContent = `✅ Coordinador ${email} creado exitosamente.`;
+      errorDiv.style.color = 'green';
+      
+      // Limpiar campos
       document.getElementById('adminEmail').value = '';
       document.getElementById('adminPassword').value = '';
-      // Cerrar sesión del admin para que el coordinador pueda loguearse
-      await auth.signOut();
+      
+      // Recargar estadísticas y lista de coordinadores
       cargarEstadisticas();
+      cargarListaCoordinadores();
+      
+      // El admin no necesita volver a loguearse, solo se mantiene en el panel
+      console.log('Coordinador creado, admin permanece en panel');
+      
     } catch (e) {
-      document.getElementById('adminError').textContent = e.message;
-      document.getElementById('adminError').style.color = 'red';
+      errorDiv.textContent = `Error: ${e.message}`;
+      errorDiv.style.color = 'red';
     }
   };
 }
@@ -343,6 +406,58 @@ async function cargarEstadisticas() {
   } catch (e) {
     console.error('Error cargando estadísticas:', e);
   }
+}
+
+// Cargar lista de coordinadores
+async function cargarListaCoordinadores() {
+  try {
+    const listaDiv = document.getElementById('listaCoordinadores');
+    if (!listaDiv) return;
+    
+    const usuariosSnap = await db.collection('usuarios')
+      .where('rol', '==', 'coordinador')
+      .orderBy('fechaCreacion', 'desc')
+      .get();
+    
+    if (usuariosSnap.empty) {
+      listaDiv.innerHTML = '<p style="color:#666;text-align:center;">No hay coordinadores registrados</p>';
+      return;
+    }
+    
+    let html = '';
+    usuariosSnap.forEach(doc => {
+      const data = doc.data();
+      const fecha = data.fechaCreacion ? 
+        data.fechaCreacion.toDate().toLocaleDateString() : 
+        'Fecha no disponible';
+      
+      html += `
+        <div style="padding:8px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <strong>${data.email}</strong>
+            <br><small style="color:#666;">Creado: ${fecha}</small>
+          </div>
+          <span style="background:#4299e1;color:white;padding:2px 8px;border-radius:4px;font-size:0.8em;">
+            Coordinador
+          </span>
+        </div>
+      `;
+    });
+    
+    listaDiv.innerHTML = html;
+  } catch (e) {
+    console.error('Error cargando coordinadores:', e);
+    const listaDiv = document.getElementById('listaCoordinadores');
+    if (listaDiv) {
+      listaDiv.innerHTML = '<p style="color:#dc2626;">Error cargando coordinadores</p>';
+    }
+  }
+}
+
+// Botón para refrescar lista de coordinadores
+const btnRefrescarCoordinadores = document.getElementById('btnRefrescarCoordinadores');
+if (btnRefrescarCoordinadores) {
+  btnRefrescarCoordinadores.onclick = cargarListaCoordinadores;
 }
 
 // Cargar psicólogos para el selector
