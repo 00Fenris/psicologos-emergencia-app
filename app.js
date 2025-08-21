@@ -17,24 +17,24 @@ let isAdminAuthenticated = false; // Para track del admin
 // --- Inicialización y funciones de UI ---
 document.addEventListener('DOMContentLoaded', function() {
   // Funcionalidad de pestañas
-  const tabPsicologo = document.getElementById('tabPsicologo');
+  const tabUsuarios = document.getElementById('tabUsuarios');
   const tabAdmin = document.getElementById('tabAdmin');
-  const panelPsicologo = document.getElementById('panelPsicologo');
-  const panelAdminTab = document.getElementById('panelAdminTab'); // Cambié aquí
+  const panelUsuarios = document.getElementById('panelUsuarios');
+  const panelAdminTab = document.getElementById('panelAdminTab');
 
-  if (tabPsicologo && tabAdmin) {
-    tabPsicologo.onclick = () => {
-      tabPsicologo.classList.add('active');
+  if (tabUsuarios && tabAdmin) {
+    tabUsuarios.onclick = () => {
+      tabUsuarios.classList.add('active');
       tabAdmin.classList.remove('active');
-      panelPsicologo.classList.add('active');
+      panelUsuarios.classList.add('active');
       panelAdminTab.classList.remove('active');
     };
 
     tabAdmin.onclick = () => {
       tabAdmin.classList.add('active');
-      tabPsicologo.classList.remove('active');
+      tabUsuarios.classList.remove('active');
       panelAdminTab.classList.add('active');
-      panelPsicologo.classList.remove('active');
+      panelUsuarios.classList.remove('active');
     };
   }
 
@@ -106,33 +106,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Botón btnAdminAccess no encontrado');
   }
   if (btnSalirAdmin) btnSalirAdmin.onclick = logout;
-
-  // Login coordinador rápido
-  const btnLoginCoordQuick = document.getElementById('btnLoginCoordQuick');
-  if (btnLoginCoordQuick) {
-    btnLoginCoordQuick.onclick = async () => {
-      const email = document.getElementById('coordEmailQuick').value.trim();
-      const pass = document.getElementById('coordPasswordQuick').value;
-      
-      if (!email || !pass) {
-        showError('Completa todos los campos.');
-        return;
-      }
-      
-      try {
-        const userCred = await auth.signInWithEmailAndPassword(email, pass);
-        const user = userCred.user;
-        const doc = await db.collection('usuarios').doc(user.uid).get();
-        if (doc.exists && doc.data().rol === 'coordinador') {
-          mostrarVista('coordinador');
-        } else {
-          showError('Este usuario no es coordinador.');
-        }
-      } catch (e) {
-        showError('Error: ' + e.message);
-      }
-    };
-  }
 });
 
 // Función para mostrar errores de forma elegante
@@ -176,6 +149,7 @@ function mostrarVista(vista) {
     setTimeout(() => {
       cargarEstadisticasCoordinador();
       cargarPsicologosDisponibles();
+      cargarChatCoordinadorAdmin(); // Cargar chat con admin
     }, 100);
   }
   if (vista === 'login') document.getElementById('login').classList.remove('hidden');
@@ -185,6 +159,7 @@ function mostrarVista(vista) {
     setTimeout(() => {
       cargarEstadisticas();
       cargarListaCoordinadores();
+      cargarCoordinadoresParaChat(); // Cargar coordinadores para chat
     }, 100);
   }
 }
@@ -320,9 +295,6 @@ if (btnCrearCoordinador) {
         fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
       });
       
-      // Cerrar sesión del coordinador recién creado
-      await auth.signOut();
-      
       // Mostrar mensaje de éxito
       errorDiv.textContent = `✅ Coordinador ${email} creado exitosamente.`;
       errorDiv.style.color = 'green';
@@ -331,11 +303,24 @@ if (btnCrearCoordinador) {
       document.getElementById('adminEmail').value = '';
       document.getElementById('adminPassword').value = '';
       
-      // Recargar estadísticas y lista de coordinadores
-      cargarEstadisticas();
-      cargarListaCoordinadores();
+      // Re-autenticar al admin para mantener la sesión
+      try {
+        if (ADMIN_CREDENTIALS.email && ADMIN_CREDENTIALS.password) {
+          await auth.signInWithEmailAndPassword(ADMIN_CREDENTIALS.email, ADMIN_CREDENTIALS.password);
+          console.log('Admin re-autenticado exitosamente');
+        }
+      } catch (reAuthError) {
+        console.log('No se pudo re-autenticar admin, usando modo local');
+        isAdminAuthenticated = true;
+      }
       
-      // El admin no necesita volver a loguearse, solo se mantiene en el panel
+      // Recargar estadísticas y lista de coordinadores
+      setTimeout(() => {
+        cargarEstadisticas();
+        cargarListaCoordinadores();
+        cargarCoordinadoresParaChat(); // Nueva función para el chat
+      }, 500);
+      
       console.log('Coordinador creado, admin permanece en panel');
       
     } catch (e) {
@@ -610,6 +595,261 @@ function mostrarEstadisticasZonasDemo() {
   
   container.innerHTML = html;
 }
+
+// === SISTEMA DE CHAT ADMIN-COORDINADORES ===
+
+// Variables globales para el chat
+let currentCoordinadorId = '';
+let currentCoordinadorEmail = '';
+
+// Cargar coordinadores para el selector de chat
+async function cargarCoordinadoresParaChat() {
+  try {
+    const select = document.getElementById('selectCoordinador');
+    if (!select) return;
+    
+    // Si es modo demo
+    if (isAdminAuthenticated && !firebase.auth().currentUser) {
+      select.innerHTML = `
+        <option value="">-- Selecciona un coordinador --</option>
+        <option value="demo1">coord1@hospital.com</option>
+        <option value="demo2">coord2@emergencias.com</option>
+        <option value="demo3">coord3@salud.gov</option>
+      `;
+      return;
+    }
+    
+    // Modo real con Firebase
+    const coordinadoresSnap = await db.collection('usuarios')
+      .where('rol', '==', 'coordinador')
+      .get();
+    
+    select.innerHTML = '<option value="">-- Selecciona un coordinador --</option>';
+    
+    coordinadoresSnap.forEach(doc => {
+      const data = doc.data();
+      const option = document.createElement('option');
+      option.value = doc.id;
+      option.textContent = data.email;
+      option.dataset.email = data.email;
+      select.appendChild(option);
+    });
+    
+  } catch (e) {
+    console.error('Error cargando coordinadores para chat:', e);
+  }
+}
+
+// Manejar selección de coordinador
+const selectCoordinador = document.getElementById('selectCoordinador');
+if (selectCoordinador) {
+  selectCoordinador.onchange = () => {
+    const selectedOption = selectCoordinador.options[selectCoordinador.selectedIndex];
+    currentCoordinadorId = selectCoordinador.value;
+    currentCoordinadorEmail = selectedOption.dataset?.email || selectedOption.textContent;
+    
+    if (currentCoordinadorId) {
+      cargarChatAdmin();
+    } else {
+      const chatDiv = document.getElementById('chatAdmin');
+      if (chatDiv) {
+        chatDiv.innerHTML = '<p style="color:#666;text-align:center;">Selecciona un coordinador para iniciar el chat</p>';
+      }
+    }
+  };
+}
+
+// Cargar mensajes del chat admin
+function cargarChatAdmin() {
+  const chatDiv = document.getElementById('chatAdmin');
+  if (!chatDiv || !currentCoordinadorId) return;
+  
+  // Si es modo demo
+  if (isAdminAuthenticated && !firebase.auth().currentUser) {
+    chatDiv.innerHTML = `
+      <div style="margin-bottom:10px;padding:8px;background:#e3f2fd;border-radius:8px;">
+        <strong>Admin:</strong> Hola, ¿cómo van las operaciones hoy?
+        <small style="color:#666;display:block;">10:30 AM</small>
+      </div>
+      <div style="margin-bottom:10px;padding:8px;background:#f1f8e9;border-radius:8px;">
+        <strong>${currentCoordinadorEmail}:</strong> Todo bien, 3 salidas programadas para esta tarde.
+        <small style="color:#666;display:block;">10:35 AM</small>
+      </div>
+      <div style="margin-bottom:10px;padding:8px;background:#e3f2fd;border-radius:8px;">
+        <strong>Admin:</strong> Perfecto, mantén informado sobre cualquier emergencia.
+        <small style="color:#666;display:block;">10:36 AM</small>
+      </div>
+    `;
+    return;
+  }
+  
+  // Modo real con Firebase
+  try {
+    const chatRef = db.collection('chats')
+      .doc(`admin_${currentCoordinadorId}`)
+      .collection('mensajes')
+      .orderBy('timestamp', 'asc');
+    
+    chatRef.onSnapshot(snapshot => {
+      let html = '';
+      snapshot.forEach(doc => {
+        const msg = doc.data();
+        const isAdmin = msg.remitente === 'admin';
+        const bgColor = isAdmin ? '#e3f2fd' : '#f1f8e9';
+        const tiempo = msg.timestamp ? msg.timestamp.toDate().toLocaleTimeString() : 'Ahora';
+        
+        html += `
+          <div style="margin-bottom:10px;padding:8px;background:${bgColor};border-radius:8px;">
+            <strong>${isAdmin ? 'Admin' : currentCoordinadorEmail}:</strong> ${msg.texto}
+            <small style="color:#666;display:block;">${tiempo}</small>
+          </div>
+        `;
+      });
+      
+      if (!html) {
+        html = '<p style="color:#666;text-align:center;">No hay mensajes. ¡Inicia la conversación!</p>';
+      }
+      
+      chatDiv.innerHTML = html;
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    });
+  } catch (e) {
+    console.error('Error cargando chat:', e);
+    chatDiv.innerHTML = '<p style="color:#dc2626;text-align:center;">Error cargando el chat</p>';
+  }
+}
+
+// Enviar mensaje del admin
+const btnSendAdmin = document.getElementById('btnSendAdmin');
+const msgAdmin = document.getElementById('msgAdmin');
+
+if (btnSendAdmin && msgAdmin) {
+  btnSendAdmin.onclick = async () => {
+    const mensaje = msgAdmin.value.trim();
+    if (!mensaje || !currentCoordinadorId) return;
+    
+    // Si es modo demo
+    if (isAdminAuthenticated && !firebase.auth().currentUser) {
+      const chatDiv = document.getElementById('chatAdmin');
+      if (chatDiv) {
+        const nuevoMensaje = `
+          <div style="margin-bottom:10px;padding:8px;background:#e3f2fd;border-radius:8px;">
+            <strong>Admin:</strong> ${mensaje}
+            <small style="color:#666;display:block;">${new Date().toLocaleTimeString()}</small>
+          </div>
+        `;
+        chatDiv.innerHTML += nuevoMensaje;
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+      }
+      msgAdmin.value = '';
+      return;
+    }
+    
+    // Modo real con Firebase
+    try {
+      await db.collection('chats')
+        .doc(`admin_${currentCoordinadorId}`)
+        .collection('mensajes')
+        .add({
+          texto: mensaje,
+          remitente: 'admin',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      
+      msgAdmin.value = '';
+    } catch (e) {
+      console.error('Error enviando mensaje:', e);
+      showError('Error enviando mensaje');
+    }
+  };
+  
+  // Enviar con Enter
+  msgAdmin.onkeypress = (e) => {
+    if (e.key === 'Enter') {
+      btnSendAdmin.click();
+    }
+  };
+}
+
+// Botón refrescar coordinadores del chat
+const btnRefrescarCoordinadoresChat = document.getElementById('btnRefrescarCoordinadoresChat');
+if (btnRefrescarCoordinadoresChat) {
+  btnRefrescarCoordinadoresChat.onclick = cargarCoordinadoresParaChat;
+}
+
+// === CHAT DEL COORDINADOR CON ADMIN ===
+
+// Chat del coordinador con el admin
+const btnSendCoordinadorAdmin = document.getElementById('btnSendCoordinadorAdmin');
+const msgCoordinadorAdmin = document.getElementById('msgCoordinadorAdmin');
+
+if (btnSendCoordinadorAdmin && msgCoordinadorAdmin) {
+  btnSendCoordinadorAdmin.onclick = async () => {
+    const mensaje = msgCoordinadorAdmin.value.trim();
+    if (!mensaje || !auth.currentUser) return;
+    
+    try {
+      await db.collection('chats')
+        .doc(`admin_${auth.currentUser.uid}`)
+        .collection('mensajes')
+        .add({
+          texto: mensaje,
+          remitente: 'coordinador',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      
+      msgCoordinadorAdmin.value = '';
+    } catch (e) {
+      console.error('Error enviando mensaje coordinador:', e);
+    }
+  };
+  
+  msgCoordinadorAdmin.onkeypress = (e) => {
+    if (e.key === 'Enter') {
+      btnSendCoordinadorAdmin.click();
+    }
+  };
+}
+
+// Cargar chat del coordinador cuando entra a su vista
+function cargarChatCoordinadorAdmin() {
+  if (!auth.currentUser) return;
+  
+  const chatDiv = document.getElementById('chatCoordinadorAdmin');
+  if (!chatDiv) return;
+  
+  try {
+    const chatRef = db.collection('chats')
+      .doc(`admin_${auth.currentUser.uid}`)
+      .collection('mensajes')
+      .orderBy('timestamp', 'asc');
+    
+    chatRef.onSnapshot(snapshot => {
+      let html = '';
+      snapshot.forEach(doc => {
+        const msg = doc.data();
+        const isCoordinador = msg.remitente === 'coordinador';
+        const bgColor = isCoordinador ? '#f1f8e9' : '#e3f2fd';
+        const tiempo = msg.timestamp ? msg.timestamp.toDate().toLocaleTimeString() : 'Ahora';
+        
+        html += `
+          <div style="margin-bottom:10px;padding:8px;background:${bgColor};border-radius:8px;">
+            <strong>${isCoordinador ? 'Tú' : 'Admin'}:</strong> ${msg.texto}
+            <small style="color:#666;display:block;">${tiempo}</small>
+          </div>
+        `;
+      });
+      
+      if (!html) {
+        html = '<p style="color:#666;text-align:center;">No hay mensajes. ¡Escribe algo al admin!</p>';
+      }
+      
+      chatDiv.innerHTML = html;
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    });
+  } catch (e) {
+    console.error('Error cargando chat coordinador:', e);
+  }
 
 // Mostrar coordinadores de demostración
 function mostrarCoordinadoresDemo() {
@@ -1332,3 +1572,81 @@ if(btnDescargarPDF){
     });
   };
 }
+
+// Función para cargar chat coordinador con admin
+function cargarChatCoordinadorAdmin() {
+  console.log('Cargando chat coordinador con admin...');
+  const lista = document.getElementById('listaCoordinadoresChat');
+  if (lista) {
+    lista.innerHTML = '<li><a href="#" onclick="seleccionarAdminParaChat()">Administrador</a></li>';
+  }
+}
+
+// Función para seleccionar admin para chat
+function seleccionarAdminParaChat() {
+  console.log('Seleccionando admin para chat...');
+  document.getElementById('coordinadorSeleccionadoName').textContent = 'Administrador';
+  document.getElementById('coordinadorSeleccionadoId').value = 'admin';
+  document.getElementById('chatCoordinador').style.display = 'block';
+  
+  // Cargar mensajes con admin
+  cargarMensajesCoordinadorAdmin();
+}
+
+// Función para cargar mensajes entre coordinador y admin
+function cargarMensajesCoordinadorAdmin() {
+  const coordinadorId = currentUser.uid;
+  const adminId = 'admin';
+  const chatId = [adminId, coordinadorId].sort().join('_');
+  
+  db.collection('chats').doc(chatId).collection('messages')
+    .orderBy('timestamp', 'asc')
+    .onSnapshot((snapshot) => {
+      const messagesDiv = document.getElementById('messagesCoordinador');
+      messagesDiv.innerHTML = '';
+      
+      snapshot.forEach((doc) => {
+        const message = doc.data();
+        const messageElement = document.createElement('div');
+        messageElement.className = message.senderId === coordinadorId ? 'message sent' : 'message received';
+        
+        const time = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleTimeString() : 'Ahora';
+        messageElement.innerHTML = `
+          <div class="message-content">${message.text}</div>
+          <div class="message-time">${time}</div>
+        `;
+        
+        messagesDiv.appendChild(messageElement);
+      });
+      
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }, (error) => {
+      console.error('Error al cargar mensajes:', error);
+    });
+}
+
+// Event listener para envío de mensaje desde coordinador
+document.getElementById('chatFormCoordinador').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const messageInput = document.getElementById('messageInputCoordinador');
+  const message = messageInput.value.trim();
+  
+  if (message && currentUser) {
+    const coordinadorId = currentUser.uid;
+    const adminId = 'admin';
+    const chatId = [adminId, coordinadorId].sort().join('_');
+    
+    db.collection('chats').doc(chatId).collection('messages').add({
+      text: message,
+      senderId: coordinadorId,
+      senderName: currentUser.displayName || 'Coordinador',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    })
+    .then(() => {
+      messageInput.value = '';
+    })
+    .catch((error) => {
+      console.error('Error al enviar mensaje:', error);
+    });
+  }
+});

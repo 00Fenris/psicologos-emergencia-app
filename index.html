@@ -27,13 +27,13 @@
       
       <div class="login-card">
         <div class="tab-container">
-          <button class="tab active" id="tabPsicologo">Psicólogos</button>
+          <button class="tab active" id="tabUsuarios">Psicólogos / Coordinadores</button>
           <button class="tab" id="tabAdmin">Administración</button>
         </div>
         
-        <!-- Panel Psicólogos -->
-        <div id="panelPsicologo" class="tab-content active">
-          <h2>Acceso Psicólogos</h2>
+        <!-- Panel Unificado Psicólogos/Coordinadores -->
+        <div id="panelUsuarios" class="tab-content active">
+          <h2>Acceso Sistema</h2>
           <div class="form-group">
             <label for="emailLogin">Email</label>
             <input id="emailLogin" type="email" placeholder="tu@email.com" autocomplete="email" />
@@ -76,17 +76,6 @@
               <div style="font-size:0.8em;color:#666;margin-top:10px;">
                 <strong>Demo:</strong> test@mail.com / 123456
               </div>
-            </div>
-            <div class="admin-card">
-              <div class="admin-icon">👨‍💼</div>
-              <h3>Login Coordinador</h3>
-              <div class="form-group">
-                <input id="coordEmailQuick" type="email" placeholder="Email coordinador" />
-              </div>
-              <div class="form-group">
-                <input id="coordPasswordQuick" type="password" placeholder="Contraseña" />
-              </div>
-              <button id="btnLoginCoordQuick" class="btn-coord">Acceder</button>
             </div>
           </div>
         </div>
@@ -202,6 +191,18 @@
         <h3>🚨 Psicólogos Disponibles</h3>
         <div id="listaPsicologosDisponibles">
           <p>Cargando psicólogos disponibles...</p>
+        </div>
+      </div>
+      
+      <!-- Chat con Administrador -->
+      <div class="card">
+        <h3>💬 Chat con Administrador</h3>
+        <div id="chatCoordinadorAdmin" class="chat" style="height:200px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:10px;background:#f9fafb;margin-bottom:10px;">
+          <p style="color:#666;text-align:center;">Chat con el administrador del sistema</p>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <input id="msgCoordinadorAdmin" type="text" placeholder="Escribe tu mensaje al admin..." style="flex:1;" />
+          <button id="btnSendCoordinadorAdmin" class="btn-primary" style="padding:8px 16px;">Enviar</button>
         </div>
       </div>
     </div>
@@ -350,6 +351,27 @@
         <h3>🗺️ Análisis por Zonas</h3>
         <div id="estadisticasZonas" style="max-height:300px;overflow-y:auto;">
           <p>Cargando estadísticas de zonas...</p>
+        </div>
+      </div>
+      
+      <!-- Chat con Coordinadores -->
+      <div class="card">
+        <h3>💬 Chat con Coordinadores</h3>
+        <div class="chat-section">
+          <div class="form-group">
+            <label for="selectCoordinador">Selecciona coordinador:</label>
+            <select id="selectCoordinador" style="width:100%;margin-bottom:10px;">
+              <option value="">-- Selecciona un coordinador --</option>
+            </select>
+            <button id="btnRefrescarCoordinadoresChat" class="btn-secondary" style="font-size:0.8em;padding:4px 8px;">🔄 Refrescar</button>
+          </div>
+          <div id="chatAdmin" class="chat" style="height:200px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:10px;background:#f9fafb;margin-bottom:10px;">
+            <p style="color:#666;text-align:center;">Selecciona un coordinador para iniciar el chat</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <input id="msgAdmin" type="text" placeholder="Escribe tu mensaje..." style="flex:1;" />
+            <button id="btnSendAdmin" class="btn-primary" style="padding:8px 16px;">Enviar</button>
+          </div>
         </div>
       </div>
     </div>
