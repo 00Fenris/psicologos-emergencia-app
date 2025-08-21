@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Psicólogos Emergencia</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="stylesheet" href="styles.css">
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -20,8 +21,8 @@
       <input id="emailLogin" type="email" placeholder="Email" autocomplete="email" />
       <input id="passwordLogin" type="password" placeholder="Contraseña" autocomplete="current-password" />
       <select id="rol">
-    <option value="psicologo">Psicólogo</option>
-    <option value="coordinador">Coordinador</option>
+        <option value="psicologo">Psicólogo</option>
+        <option value="coordinador">Coordinador</option>
       </select>
       <button id="btnLogin">Entrar</button>
       <button id="btnRegister">Registrarse</button>
@@ -34,14 +35,7 @@
       </div>
     </div>
   </div>
-  <!-- Página de acceso -->
-  <div id="acceso" class="center">
-    <div class="card">
-      <h2>¿Cómo quieres acceder?</h2>
-      <button id="btnPsicologo">Soy Psicólogo</button>
-      <button id="btnCoordinador">Soy Coordinador</button>
-    </div>
-  </div>
+
   <!-- Vista Psicólogo -->
   <div id="vistaPsicologo" class="hidden">
     <header>
@@ -51,23 +45,23 @@
     <div class="card" style="max-width:400px;margin:0 auto;">
       <form id="formPsico1" autocomplete="off">
         <label for="nombre">Nombre completo</label>
-      <input id="nombre1" name="nombre" type="text" required />
-      <label for="telefono">Teléfono</label>
-      <input id="telefono1" name="telefono" type="tel" placeholder="Ej: +34 600 123 456" required autocomplete="tel" />
-      <label for="zona">Zona</label>
-      <input id="zona1" name="zona" type="text" required autocomplete="off" />
-          <div id="zona-sugerencias" class="sugerencias"></div>
-          <label for="semana">Semana</label>
-          <input id="semana1" name="semana" type="week" required autocomplete="off" />
-          <label for="turno">Turno</label>
-          <select id="turno1" name="turno" required>
-            <option value="">-- Selecciona un turno --</option>
-            <option>Mañana</option>
-            <option>Tarde</option>
-            <option>Noche</option>
-          </select>
-      <label for="notas">Notas (opcional)</label>
-      <input id="notas1" name="notas" type="text" autocomplete="off" />
+        <input id="nombre1" name="nombre" type="text" required />
+        <label for="telefono">Teléfono</label>
+        <input id="telefono1" name="telefono" type="tel" placeholder="Ej: +34 600 123 456" required autocomplete="tel" />
+        <label for="zona">Zona</label>
+        <input id="zona1" name="zona" type="text" required autocomplete="off" />
+        <div id="zona-sugerencias" class="sugerencias"></div>
+        <label for="semana">Semana</label>
+        <input id="semana1" name="semana" type="week" required autocomplete="off" />
+        <label for="turno">Turno</label>
+        <select id="turno1" name="turno" required>
+          <option value="">-- Selecciona un turno --</option>
+          <option>Mañana</option>
+          <option>Tarde</option>
+          <option>Noche</option>
+        </select>
+        <label for="notas">Notas (opcional)</label>
+        <input id="notas1" name="notas" type="text" autocomplete="off" />
         <button type="submit">Guardar</button>
       </form>
     </div>
@@ -78,6 +72,7 @@
       <button id="btnSendPsico" class="small">Enviar</button>
     </div>
   </div>
+
   <!-- Vista Coordinador -->
   <div id="vistaCoordinador" class="hidden">
     <header>
@@ -88,7 +83,7 @@
       <label for="filtroDia">Filtrar por día</label>
       <input id="filtroDia" type="date" />
       <label for="filtroZona">Filtrar por zona</label>
-    <input id="filtroZona" type="text" autocomplete="off" />
+      <input id="filtroZona" type="text" autocomplete="off" />
       <div id="filtroZona-sugerencias" class="sugerencias"></div>
       <label for="filtroTurno">Filtrar por turno</label>
       <select id="filtroTurno">
@@ -110,9 +105,9 @@
       <label for="selectPsico">Selecciona psicólogo:</label>
       <select id="selectPsico" style="width:100%;margin-bottom:10px"></select>
       <div id="chatCoord" class="chat"></div>
-  <input id="msgCoord1" type="text" placeholder="Escribe tu mensaje..." style="width:80%" />
+      <input id="msgCoord1" type="text" placeholder="Escribe tu mensaje..." style="width:80%" />
       <button id="btnSendCoord" class="small">Enviar</button>
     </div>
   </div>
 </body>
-// ...existing code...
+</html>

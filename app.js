@@ -25,16 +25,34 @@ function mostrarVista(vista) {
 
 // --- Login y registro ---
 document.getElementById('btnLogin').onclick = async () => {
-  const email = document.getElementById('emailLogin').value;
+  const email = document.getElementById('emailLogin').value.trim();
   const pass = document.getElementById('passwordLogin').value;
+  
+  // Validar email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    document.getElementById('loginError').textContent = 'Por favor, introduce un email válido.';
+    document.getElementById('loginError').style.color = 'red';
+    return;
+  }
+  
+  // Validar contraseña
+  if (!pass) {
+    document.getElementById('loginError').textContent = 'Por favor, introduce una contraseña.';
+    document.getElementById('loginError').style.color = 'red';
+    return;
+  }
+  
   try {
     const userCred = await auth.signInWithEmailAndPassword(email, pass);
     const user = userCred.user;
     const doc = await db.collection('usuarios').doc(user.uid).get();
     const rol = doc.exists ? doc.data().rol : 'psicologo';
     mostrarVista(rol);
+    document.getElementById('loginError').textContent = '';
   } catch (e) {
-    document.getElementById('loginError').textContent = e.message;
+    document.getElementById('loginError').textContent = 'Error: ' + e.message;
+    document.getElementById('loginError').style.color = 'red';
   }
 };
 
@@ -46,18 +64,36 @@ document.getElementById('btnRegister').onclick = async () => {
     return;
   }
   
-  const email = document.getElementById('emailRegister').value;
+  const email = document.getElementById('emailRegister').value.trim();
   const pass = document.getElementById('passwordRegister').value;
   const rol = document.getElementById('rol').value;
+  
+  // Validar email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    document.getElementById('loginError').textContent = 'Por favor, introduce un email válido.';
+    return;
+  }
+  
+  // Validar contraseña
+  if (!pass || pass.length < 6) {
+    document.getElementById('loginError').textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    return;
+  }
+  
   try {
     const userCred = await auth.createUserWithEmailAndPassword(email, pass);
     const user = userCred.user;
     await db.collection('usuarios').doc(user.uid).set({ rol });
-    mostrarVista('login');
     document.getElementById('loginError').textContent = 'Registro exitoso. Ahora puedes iniciar sesión.';
+    document.getElementById('loginError').style.color = 'green';
     registerFields.style.display = 'none';
+    // Limpiar campos
+    document.getElementById('emailRegister').value = '';
+    document.getElementById('passwordRegister').value = '';
   } catch (e) {
     document.getElementById('loginError').textContent = e.message;
+    document.getElementById('loginError').style.color = 'red';
   }
 };
 
