@@ -8,6 +8,7 @@
 if (typeof firebaseConfig !== 'undefined' && !firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
+<<<<<<< HEAD
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -132,6 +133,46 @@ if (btnSendCoord && msgCoord && selectPsico) {
   };
 }
 
+=======
+// --- Modo local automático ---
+const LOCAL_MODE = (typeof firebase === 'undefined' || typeof firebaseConfig === 'undefined');
+
+// Utilidades para localStorage
+const LS_KEY_USERS = 'psicologos_app_usuarios';
+const LS_KEY_DISP = 'psicologos_app_disponibilidad';
+function lsGet(key) { try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; } }
+function lsSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+// --- Login y registro modo local ---
+if (LOCAL_MODE) {
+  document.getElementById('btnLogin').onclick = () => {
+    const email = document.getElementById('email').value;
+    const pass = document.getElementById('password').value;
+    const users = lsGet(LS_KEY_USERS);
+    const user = users.find(u => u.email === email && u.pass === pass);
+    if (user) {
+      mostrarVista(user.rol);
+      document.getElementById('loginError').textContent = '';
+    } else {
+      document.getElementById('loginError').textContent = 'Usuario o contraseña incorrectos.';
+    }
+  };
+  document.getElementById('btnRegister').onclick = () => {
+    const email = document.getElementById('email').value;
+    const pass = document.getElementById('password').value;
+    const rol = document.getElementById('rol').value;
+    let users = lsGet(LS_KEY_USERS);
+    if (users.find(u => u.email === email)) {
+      document.getElementById('loginError').textContent = 'El email ya está registrado.';
+      return;
+    }
+    users.push({ email, pass, rol });
+    lsSet(LS_KEY_USERS, users);
+    document.getElementById('loginError').textContent = 'Registro exitoso. Ahora puedes iniciar sesión.';
+    mostrarVista('login');
+  };
+}
+>>>>>>> c6a8ca0 (Modo local automático con localStorage para login y registro)
 // --- Autocompletado de zonas ---
 const zonasDisponibles = [
   "Ávila Zona Sur - Arenas de San Pedro",
