@@ -38,9 +38,16 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
-  // Panel Admin - autenticación requerida
-  const btnAdminAccess = document.getElementById('btnAdminAccess');
+  // Panel Admin - botón de salir
   const btnSalirAdmin = document.getElementById('btnSalirAdmin');
+  if (btnSalirAdmin) btnSalirAdmin.onclick = logout;
+});
+
+// === CONFIGURACIÓN DEL BOTÓN DE ADMINISTRACIÓN ===
+// Mover fuera de DOMContentLoaded para asegurar que funcione
+window.addEventListener('load', function() {
+  console.log('🔄 Configurando botón de administración...');
+  const btnAdminAccess = document.getElementById('btnAdminAccess');
   
   // Credenciales de administrador (en producción deberían estar en una base de datos segura)
   const ADMIN_CREDENTIALS = {
@@ -49,27 +56,45 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   
   if (btnAdminAccess) {
-    btnAdminAccess.onclick = async () => {
+    console.log('✅ Botón de administración encontrado');
+    
+    // Agregar evento click
+    btnAdminAccess.addEventListener('click', async function() {
+      console.log('🖱️ Botón de administración clickeado');
       const adminEmail = document.getElementById('adminEmailAccess').value.trim();
       const adminPassword = document.getElementById('adminPasswordAccess').value;
       
+      console.log('📧 Email:', adminEmail, '🔑 Password length:', adminPassword?.length || 0);
+      
       // Validar credenciales de administrador
       if (!adminEmail || !adminPassword) {
+        console.log('❌ Credenciales vacías');
         showError('Introduce email y contraseña de administrador.');
         return;
       }
       
       if (adminEmail === ADMIN_CREDENTIALS.email && adminPassword === ADMIN_CREDENTIALS.password) {
-        console.log('Acceso de administrador autorizado');
-        showSuccess('Acceso autorizado. Creando cuenta admin si no existe...');
+        console.log('✅ Credenciales correctas - Acceso de administrador autorizado');
+        showSuccess('Acceso autorizado. Iniciando panel administrativo...');
+        
+        // Marcar como admin autenticado
+        isAdminAuthenticated = true;
+        
+        // En modo demo, no necesitamos Firebase
+        if (typeof firebase === 'undefined' || !firebase.auth) {
+          console.log('🔄 Usando modo demo sin Firebase');
+          setTimeout(() => {
+            mostrarVista('panelAdmin');
+          }, 1000);
+          return;
+        }
         
         try {
           // Intentar login primero
           await firebase.auth().signInWithEmailAndPassword(adminEmail, adminPassword);
-          console.log('Admin autenticado con Firebase');
-          isAdminAuthenticated = true;
+          console.log('✅ Admin autenticado con Firebase');
         } catch (authError) {
-          console.log('Cuenta admin no existe, creándola...', authError.message);
+          console.log('⚠️ Cuenta admin no existe, creándola...', authError.message);
           
           try {
             // Crear cuenta de administrador
@@ -84,13 +109,11 @@ document.addEventListener('DOMContentLoaded', function() {
               nombre: 'Administrador del Sistema'
             });
             
-            console.log('Cuenta admin creada exitosamente');
-            isAdminAuthenticated = true;
+            console.log('✅ Cuenta admin creada exitosamente');
             showSuccess('Cuenta de administrador creada y autenticada');
           } catch (createError) {
-            console.log('Error creando cuenta admin:', createError.message);
+            console.log('⚠️ Error creando cuenta admin:', createError.message);
             // Si no puede crear cuenta, usar modo local
-            isAdminAuthenticated = true;
             showSuccess('Usando modo administrador local');
           }
         }
@@ -99,29 +122,58 @@ document.addEventListener('DOMContentLoaded', function() {
           mostrarVista('panelAdmin');
         }, 1500);
       } else {
+        console.log('❌ Credenciales incorrectas');
         showError('Credenciales de administrador incorrectas.');
       }
-    };
+    });
+    
+    // Agregar evento para Enter en los campos de input
+    const adminEmailInput = document.getElementById('adminEmailAccess');
+    const adminPasswordInput = document.getElementById('adminPasswordAccess');
+    
+    if (adminEmailInput) {
+      adminEmailInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          btnAdminAccess.click();
+        }
+      });
+    }
+    
+    if (adminPasswordInput) {
+      adminPasswordInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          btnAdminAccess.click();
+        }
+      });
+    }
+    
   } else {
-    console.log('Botón btnAdminAccess no encontrado');
+    console.error('❌ Botón btnAdminAccess no encontrado en el DOM');
+    console.log('🔍 Elementos disponibles:', document.querySelectorAll('button').length, 'botones');
   }
-  if (btnSalirAdmin) btnSalirAdmin.onclick = logout;
 });
 
 // Función para mostrar errores de forma elegante
 function showError(message) {
+  console.log('❌ Error:', message);
   const errorDiv = document.getElementById('loginError');
   if (errorDiv) {
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
+    errorDiv.style.background = '#fee2e2';
+    errorDiv.style.color = '#dc2626';
     setTimeout(() => {
       errorDiv.style.display = 'none';
     }, 5000);
+  } else {
+    console.error('Elemento loginError no encontrado');
+    alert(message); // Fallback
   }
 }
 
 // Función para mostrar mensajes de éxito
 function showSuccess(message) {
+  console.log('✅ Éxito:', message);
   const errorDiv = document.getElementById('loginError');
   if (errorDiv) {
     errorDiv.textContent = message;
@@ -133,6 +185,9 @@ function showSuccess(message) {
       errorDiv.style.background = '#fee2e2';
       errorDiv.style.color = '#dc2626';
     }, 3000);
+  } else {
+    console.error('Elemento loginError no encontrado');
+    alert(message); // Fallback
   }
 }
 
@@ -1875,3 +1930,25 @@ document.getElementById('chatFormCoordinador').addEventListener('submit', functi
     });
   }
 });
+
+// === VERIFICACIÓN FINAL DEL SISTEMA ===
+console.log('🔍 Sistema de Psicólogos Emergencia - Verificación de Componentes');
+console.log('✅ Firebase Auth:', typeof firebase !== 'undefined' ? 'Disponible' : 'No disponible (modo demo)');
+console.log('✅ Firestore:', typeof db !== 'undefined' ? 'Disponible' : 'No disponible');
+
+// Función de diagnóstico para depuración
+window.diagnosticoSistema = function() {
+  console.log('=== DIAGNÓSTICO DEL SISTEMA ===');
+  console.log('🔧 Firebase:', typeof firebase !== 'undefined' ? 'OK' : 'NO DISPONIBLE');
+  console.log('🔧 Auth:', typeof firebase !== 'undefined' && firebase.auth ? 'OK' : 'NO DISPONIBLE');
+  console.log('🔧 Admin autenticado:', isAdminAuthenticated);
+  console.log('🔧 Usuario actual:', firebase?.auth?.()?.currentUser?.email || 'Ninguno');
+  console.log('🔧 Elementos DOM críticos:');
+  
+  ['btnAdminAccess', 'adminEmailAccess', 'adminPasswordAccess'].forEach(id => {
+    const el = document.getElementById(id);
+    console.log(`   ${id}:`, el ? 'OK' : 'FALTA');
+  });
+  
+  return 'Diagnóstico completado - revisar consola';
+};
