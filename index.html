@@ -16,24 +16,73 @@
 <body>
   <!-- Bloque de login y registro -->
   <div id="login" class="center">
-    <div class="card">
-      <h2>Acceso Psicólogos</h2>
-      <input id="emailLogin" type="email" placeholder="Email" autocomplete="email" />
-      <input id="passwordLogin" type="password" placeholder="Contraseña" autocomplete="current-password" />
-      <button id="btnLogin">Entrar</button>
-      <button id="btnRegister">Registrarse como Psicólogo</button>
-      <div id="loginError" style="color:red"></div>
-      
-      <!-- Campos adicionales para registro (ocultos por defecto) -->
-      <div id="registerFields" style="display:none; margin-top:10px;">
-        <input id="emailRegister" type="email" placeholder="Email para registro" />
-        <input id="passwordRegister" type="password" placeholder="Contraseña para registro" />
+    <div class="login-container">
+      <div class="login-header">
+        <div class="logo">
+          <div class="logo-icon">🧠</div>
+          <h1>Psicólogos Emergencia</h1>
+        </div>
+        <p class="subtitle">Sistema de gestión de disponibilidad</p>
       </div>
       
-      <!-- Acceso admin para coordinadores -->
-      <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
-        <h3>Acceso Coordinadores</h3>
-        <button id="btnAdminAccess" style="background:#e53e3e;">Panel Administrativo</button>
+      <div class="login-card">
+        <div class="tab-container">
+          <button class="tab active" id="tabPsicologo">Psicólogos</button>
+          <button class="tab" id="tabAdmin">Administración</button>
+        </div>
+        
+        <!-- Panel Psicólogos -->
+        <div id="panelPsicologo" class="tab-content active">
+          <h2>Acceso Psicólogos</h2>
+          <div class="form-group">
+            <label for="emailLogin">Email</label>
+            <input id="emailLogin" type="email" placeholder="tu@email.com" autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label for="passwordLogin">Contraseña</label>
+            <input id="passwordLogin" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+          <button id="btnLogin" class="btn-primary">Iniciar Sesión</button>
+          <button id="btnRegister" class="btn-secondary">Registrarse como Psicólogo</button>
+          
+          <!-- Campos adicionales para registro (ocultos por defecto) -->
+          <div id="registerFields" class="register-fields" style="display:none;">
+            <div class="form-group">
+              <label for="emailRegister">Email para registro</label>
+              <input id="emailRegister" type="email" placeholder="nuevo@email.com" />
+            </div>
+            <div class="form-group">
+              <label for="passwordRegister">Contraseña</label>
+              <input id="passwordRegister" type="password" placeholder="Mínimo 6 caracteres" />
+            </div>
+          </div>
+        </div>
+        
+        <!-- Panel Administración -->
+        <div id="panelAdmin" class="tab-content">
+          <h2>Panel Administrativo</h2>
+          <div class="admin-options">
+            <div class="admin-card">
+              <div class="admin-icon">⚙️</div>
+              <h3>Gestión del Sistema</h3>
+              <p>Accede al panel de control completo</p>
+              <button id="btnAdminAccess" class="btn-admin">Acceder al Panel</button>
+            </div>
+            <div class="admin-card">
+              <div class="admin-icon">👨‍💼</div>
+              <h3>Login Coordinador</h3>
+              <div class="form-group">
+                <input id="coordEmailQuick" type="email" placeholder="Email coordinador" />
+              </div>
+              <div class="form-group">
+                <input id="coordPasswordQuick" type="password" placeholder="Contraseña" />
+              </div>
+              <button id="btnLoginCoordQuick" class="btn-coord">Acceder</button>
+            </div>
+          </div>
+        </div>
+        
+        <div id="loginError" class="error-message"></div>
       </div>
     </div>
   </div>

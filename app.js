@@ -11,6 +11,86 @@ if (typeof firebaseConfig !== 'undefined' && !firebase.apps.length) {
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// --- Inicialización y funciones de UI ---
+document.addEventListener('DOMContentLoaded', function() {
+  // Funcionalidad de pestañas
+  const tabPsicologo = document.getElementById('tabPsicologo');
+  const tabAdmin = document.getElementById('tabAdmin');
+  const panelPsicologo = document.getElementById('panelPsicologo');
+  const panelAdminTab = document.getElementById('panelAdmin');
+
+  if (tabPsicologo && tabAdmin) {
+    tabPsicologo.onclick = () => {
+      tabPsicologo.classList.add('active');
+      tabAdmin.classList.remove('active');
+      panelPsicologo.classList.add('active');
+      panelAdminTab.classList.remove('active');
+    };
+
+    tabAdmin.onclick = () => {
+      tabAdmin.classList.add('active');
+      tabPsicologo.classList.remove('active');
+      panelAdminTab.classList.add('active');
+      panelPsicologo.classList.remove('active');
+    };
+  }
+
+  // Login coordinador rápido
+  const btnLoginCoordQuick = document.getElementById('btnLoginCoordQuick');
+  if (btnLoginCoordQuick) {
+    btnLoginCoordQuick.onclick = async () => {
+      const email = document.getElementById('coordEmailQuick').value.trim();
+      const pass = document.getElementById('coordPasswordQuick').value;
+      
+      if (!email || !pass) {
+        showError('Completa todos los campos.');
+        return;
+      }
+      
+      try {
+        const userCred = await auth.signInWithEmailAndPassword(email, pass);
+        const user = userCred.user;
+        const doc = await db.collection('usuarios').doc(user.uid).get();
+        if (doc.exists && doc.data().rol === 'coordinador') {
+          mostrarVista('coordinador');
+        } else {
+          showError('Este usuario no es coordinador.');
+        }
+      } catch (e) {
+        showError('Error: ' + e.message);
+      }
+    };
+  }
+});
+
+// Función para mostrar errores de forma elegante
+function showError(message) {
+  const errorDiv = document.getElementById('loginError');
+  if (errorDiv) {
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    setTimeout(() => {
+      errorDiv.style.display = 'none';
+    }, 5000);
+  }
+}
+
+// Función para mostrar mensajes de éxito
+function showSuccess(message) {
+  const errorDiv = document.getElementById('loginError');
+  if (errorDiv) {
+    errorDiv.textContent = message;
+    errorDiv.style.background = '#d1fae5';
+    errorDiv.style.color = '#059669';
+    errorDiv.style.display = 'block';
+    setTimeout(() => {
+      errorDiv.style.display = 'none';
+      errorDiv.style.background = '#fee2e2';
+      errorDiv.style.color = '#dc2626';
+    }, 3000);
+  }
+}
+
 // --- Funciones de vistas ---
 function mostrarVista(vista) {
   document.getElementById('login').classList.add('hidden');
@@ -34,15 +114,13 @@ document.getElementById('btnLogin').onclick = async () => {
   // Validar email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email)) {
-    document.getElementById('loginError').textContent = 'Por favor, introduce un email válido.';
-    document.getElementById('loginError').style.color = 'red';
+    showError('Por favor, introduce un email válido.');
     return;
   }
   
   // Validar contraseña
   if (!pass) {
-    document.getElementById('loginError').textContent = 'Por favor, introduce una contraseña.';
-    document.getElementById('loginError').style.color = 'red';
+    showError('Por favor, introduce una contraseña.');
     return;
   }
   
@@ -52,10 +130,8 @@ document.getElementById('btnLogin').onclick = async () => {
     const doc = await db.collection('usuarios').doc(user.uid).get();
     const rol = doc.exists ? doc.data().rol : 'psicologo';
     mostrarVista(rol);
-    document.getElementById('loginError').textContent = '';
   } catch (e) {
-    document.getElementById('loginError').textContent = 'Error: ' + e.message;
-    document.getElementById('loginError').style.color = 'red';
+    showError('Error: ' + e.message);
   }
 };
 
@@ -81,13 +157,13 @@ document.getElementById('btnRegister').onclick = async () => {
   // Validar email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email)) {
-    document.getElementById('loginError').textContent = 'Por favor, introduce un email válido.';
+    showError('Por favor, introduce un email válido.');
     return;
   }
   
   // Validar contraseña
   if (!pass || pass.length < 6) {
-    document.getElementById('loginError').textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    showError('La contraseña debe tener al menos 6 caracteres.');
     return;
   }
   
@@ -98,15 +174,13 @@ document.getElementById('btnRegister').onclick = async () => {
     const userCred = await auth.createUserWithEmailAndPassword(email, pass);
     const user = userCred.user;
     await db.collection('usuarios').doc(user.uid).set({ rol, email });
-    document.getElementById('loginError').textContent = 'Registro exitoso. Ahora puedes iniciar sesión.';
-    document.getElementById('loginError').style.color = 'green';
+    showSuccess('Registro exitoso. Ahora puedes iniciar sesión.');
     registerFields.style.display = 'none';
     // Limpiar campos
     document.getElementById('emailRegister').value = '';
     document.getElementById('passwordRegister').value = '';
   } catch (e) {
-    document.getElementById('loginError').textContent = e.message;
-    document.getElementById('loginError').style.color = 'red';
+    showError(e.message);
   }
 };
 
@@ -115,65 +189,75 @@ function logout() {
   auth.signOut();
   mostrarVista('login');
 }
-document.getElementById('btnSalirPsicologo').onclick = logout;
-document.getElementById('btnSalirCoordinador').onclick = logout;
+const btnSalirPsicologo = document.getElementById('btnSalirPsicologo');
+const btnSalirCoordinador = document.getElementById('btnSalirCoordinador');
+if (btnSalirPsicologo) btnSalirPsicologo.onclick = logout;
+if (btnSalirCoordinador) btnSalirCoordinador.onclick = logout;
 
 // --- Panel Admin ---
-document.getElementById('btnAdminAccess').onclick = () => mostrarVista('panelAdmin');
-document.getElementById('btnSalirAdmin').onclick = logout;
+const btnAdminAccess = document.getElementById('btnAdminAccess');
+const btnSalirAdmin = document.getElementById('btnSalirAdmin');
+if (btnAdminAccess) btnAdminAccess.onclick = () => mostrarVista('panelAdmin');
+if (btnSalirAdmin) btnSalirAdmin.onclick = logout;
 
 // Crear coordinador desde panel admin
-document.getElementById('btnCrearCoordinador').onclick = async () => {
-  const email = document.getElementById('adminEmail').value.trim();
-  const pass = document.getElementById('adminPassword').value;
-  
-  if (!email || !pass) {
-    document.getElementById('adminError').textContent = 'Completa todos los campos.';
-    return;
-  }
-  
-  try {
-    const userCred = await auth.createUserWithEmailAndPassword(email, pass);
-    const user = userCred.user;
-    await db.collection('usuarios').doc(user.uid).set({ 
-      rol: 'coordinador',
-      email: email,
-      creadoPor: 'admin',
-      fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    document.getElementById('adminError').textContent = 'Coordinador creado exitosamente.';
-    document.getElementById('adminError').style.color = 'green';
-    document.getElementById('adminEmail').value = '';
-    document.getElementById('adminPassword').value = '';
-    // Cerrar sesión del admin para que el coordinador pueda loguearse
-    await auth.signOut();
-    cargarEstadisticas();
-  } catch (e) {
-    document.getElementById('adminError').textContent = e.message;
-    document.getElementById('adminError').style.color = 'red';
-  }
-};
-
-// Login coordinador desde panel admin
-document.getElementById('btnLoginCoord').onclick = async () => {
-  const email = document.getElementById('coordEmail').value.trim();
-  const pass = document.getElementById('coordPassword').value;
-  
-  try {
-    const userCred = await auth.signInWithEmailAndPassword(email, pass);
-    const user = userCred.user;
-    const doc = await db.collection('usuarios').doc(user.uid).get();
-    if (doc.exists && doc.data().rol === 'coordinador') {
-      mostrarVista('coordinador');
-    } else {
-      document.getElementById('adminError').textContent = 'Este usuario no es coordinador.';
+const btnCrearCoordinador = document.getElementById('btnCrearCoordinador');
+if (btnCrearCoordinador) {
+  btnCrearCoordinador.onclick = async () => {
+    const email = document.getElementById('adminEmail').value.trim();
+    const pass = document.getElementById('adminPassword').value;
+    
+    if (!email || !pass) {
+      document.getElementById('adminError').textContent = 'Completa todos los campos.';
+      return;
+    }
+    
+    try {
+      const userCred = await auth.createUserWithEmailAndPassword(email, pass);
+      const user = userCred.user;
+      await db.collection('usuarios').doc(user.uid).set({ 
+        rol: 'coordinador',
+        email: email,
+        creadoPor: 'admin',
+        fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      document.getElementById('adminError').textContent = 'Coordinador creado exitosamente.';
+      document.getElementById('adminError').style.color = 'green';
+      document.getElementById('adminEmail').value = '';
+      document.getElementById('adminPassword').value = '';
+      // Cerrar sesión del admin para que el coordinador pueda loguearse
+      await auth.signOut();
+      cargarEstadisticas();
+    } catch (e) {
+      document.getElementById('adminError').textContent = e.message;
       document.getElementById('adminError').style.color = 'red';
     }
-  } catch (e) {
-    document.getElementById('adminError').textContent = e.message;
-    document.getElementById('adminError').style.color = 'red';
-  }
-};
+  };
+}
+
+// Login coordinador desde panel admin
+const btnLoginCoord = document.getElementById('btnLoginCoord');
+if (btnLoginCoord) {
+  btnLoginCoord.onclick = async () => {
+    const email = document.getElementById('coordEmail').value.trim();
+    const pass = document.getElementById('coordPassword').value;
+    
+    try {
+      const userCred = await auth.signInWithEmailAndPassword(email, pass);
+      const user = userCred.user;
+      const doc = await db.collection('usuarios').doc(user.uid).get();
+      if (doc.exists && doc.data().rol === 'coordinador') {
+        mostrarVista('coordinador');
+      } else {
+        document.getElementById('adminError').textContent = 'Este usuario no es coordinador.';
+        document.getElementById('adminError').style.color = 'red';
+      }
+    } catch (e) {
+      document.getElementById('adminError').textContent = e.message;
+      document.getElementById('adminError').style.color = 'red';
+    }
+  };
+}
 
 // --- Mantener sesión ---
 auth.onAuthStateChanged(async user => {
@@ -249,9 +333,13 @@ async function cargarEstadisticas() {
       .where('timestamp', '>=', inicioSemana)
       .get();
     
-    document.getElementById('statPsicologos').textContent = psicologos;
-    document.getElementById('statCoordinadores').textContent = coordinadores;
-    document.getElementById('statSemana').textContent = registrosSnap.size;
+    const statPsicologos = document.getElementById('statPsicologos');
+    const statCoordinadores = document.getElementById('statCoordinadores');
+    const statSemana = document.getElementById('statSemana');
+    
+    if (statPsicologos) statPsicologos.textContent = psicologos;
+    if (statCoordinadores) statCoordinadores.textContent = coordinadores;
+    if (statSemana) statSemana.textContent = registrosSnap.size;
   } catch (e) {
     console.error('Error cargando estadísticas:', e);
   }
@@ -310,11 +398,14 @@ function actualizarSelectorPsicologos(turnosFiltrados = []) {
 }
 
 // Filtro de turnos para psicólogos
-document.getElementById('btnFiltrarPsico').onclick = () => {
-  const checkboxes = document.querySelectorAll('#filtroTurnoPsico input[type="checkbox"]:checked');
-  const turnosSeleccionados = Array.from(checkboxes).map(cb => cb.value);
-  actualizarSelectorPsicologos(turnosSeleccionados);
-};
+const btnFiltrarPsico = document.getElementById('btnFiltrarPsico');
+if (btnFiltrarPsico) {
+  btnFiltrarPsico.onclick = () => {
+    const checkboxes = document.querySelectorAll('#filtroTurnoPsico input[type="checkbox"]:checked');
+    const turnosSeleccionados = Array.from(checkboxes).map(cb => cb.value);
+    actualizarSelectorPsicologos(turnosSeleccionados);
+  };
+}
 
 if (btnSendCoord && msgCoord && selectPsico) {
   selectPsico.onchange = () => {
