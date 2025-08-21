@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Servicio Psicólogos de Emergencia</title>
+  <style>
+    :root{--bg:#f7f9fb;--card:#fff;--primary:#2b6cb0;--muted:#6b7280}
+    *{box-sizing:border-box}
+    body{font-family:Inter,Arial,sans-serif;margin:0;background:var(--bg);color:#111;}
+    .center{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;}
+    .card{background:var(--card);padding:30px 24px;border-radius:12px;box-shadow:0 6px 20px rgba(11,22,39,0.08);}
+    button{margin:12px 0;padding:12px 24px;border-radius:8px;border:0;background:var(--primary);color:white;cursor:pointer;font-size:16px;}
+    .hidden{display:none;}
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:18px;}
+    label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
+    input, select{width:100%;padding:9px;border:1px solid #e6e9ee;border-radius:8px;margin-top:6px}
+    input:focus, select:focus, button:focus{outline:2px solid var(--primary)}
+    .small{font-size:12px;padding:6px 8px;border-radius:8px}
+    .btn-eliminar {background: #e53e3e; border: none; padding: 6px 10px; color: white; border-radius: 6px; cursor: pointer; font-size: 12px; margin-left: 10px;}
+    .btn-borrar-todo {background: #718096; border: none; padding: 6px 10px; color: white; border-radius: 6px; cursor: pointer; font-size: 12px; margin-left: 10px;}
+    .empty{color:var(--muted);padding:12px;text-align:center}
+    ul{list-style:none;padding:0;margin:0}
+    li{padding:10px;border-radius:8px;background:#f1f5f9;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+    @media(max-width:900px){.grid{grid-template-columns:1fr;}.card{max-width:100%}}
+  </style>
+  <!-- Firebase SDKs (añade estos antes de tu configuración) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- ...existing code... -->
+</head>
+<body>
+<!-- ...existing code... -->
+</body>
+</html>
